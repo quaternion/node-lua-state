@@ -1,0 +1,1 @@
+return "foo", 1, true, { str = "bar", num = 2, bool = false  }

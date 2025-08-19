@@ -1,6 +1,6 @@
 const { LuaState } = require("../index");
 const { describe, it, beforeEach, mock } = require("node:test");
-const { strictEqual, deepStrictEqual } = require("node:assert/strict");
+const { strictEqual, deepStrictEqual, throws } = require("node:assert/strict");
 
 describe(LuaState.name, () => {
   let luaState;
@@ -10,16 +10,70 @@ describe(LuaState.name, () => {
   });
 
   describe(LuaState.prototype.eval.name, () => {
-    it("should evaluate a string", () => {
-      luaState.eval("a = 1 + 2");
-      strictEqual(luaState.getGlobal("a"), 3);
+    describe("with table return", () => {
+      it("should returns table", () => {
+        const result = luaState.eval(
+          `return { str = "foo", num = 1, bool = true }`
+        );
+        deepStrictEqual(result, { str: "foo", num: 1, bool: true });
+      });
+    });
+
+    describe("with return multiple values", () => {
+      it("should returns array", () => {
+        const result = luaState.eval(
+          `return "foo", 1, true, { str = "bar", num = 2, bool = false  }`
+        );
+
+        deepStrictEqual(result, [
+          "foo",
+          1,
+          true,
+          { str: "bar", num: 2, bool: false },
+        ]);
+      });
+    });
+
+    describe("with syntax error", () => {
+      it("throws on syntax error", () => {
+        throws(() => lua.eval(`return 1+`), Error, /unexpected symbol/);
+      });
     });
   });
 
   describe(LuaState.prototype.evalFile.name, () => {
-    it("should evaluate a file", () => {
-      const result = luaState.evalFile(__dirname + "/test-file.lua");
-      strictEqual(result, 0);
+    describe("with table return", () => {
+      it("should returns table", () => {
+        const result = luaState.evalFile(
+          __dirname + "/fixtures/return-table.lua"
+        );
+        deepStrictEqual(result, { str: "foo", num: 1, bool: true });
+      });
+    });
+
+    describe("with return multiple values", () => {
+      it("should returns array", () => {
+        const result = luaState.evalFile(
+          __dirname + "/fixtures/return-multiple.lua"
+        );
+
+        deepStrictEqual(result, [
+          "foo",
+          1,
+          true,
+          { str: "bar", num: 2, bool: false },
+        ]);
+      });
+    });
+
+    describe("with syntax error", () => {
+      it("throws on syntax error", () => {
+        throws(
+          () => lua.evalFile("test/fixtures/syntax_error.lua"),
+          Error,
+          /unexpected symbol/
+        );
+      });
     });
   });
 

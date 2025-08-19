@@ -1,6 +1,8 @@
+#include <napi.h>
 #include <sstream>
 
 #include "lua-compat-defines.h"
+#include "lua-state-wrapper-internal.h"
 #include "lua-state-wrapper.h"
 
 extern "C" {
@@ -10,7 +12,6 @@ extern "C" {
 
 namespace {
 
-  Napi::Value luaToJsValue(lua_State* lua_state, int index, const Napi::Env& env);
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env);
   void pushJsValueToLua(lua_State* luaState, const Napi::Value& value);
 
@@ -108,24 +109,24 @@ Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   return info.This();
 }
 
-namespace {
-
-  Napi::Value luaToJsValue(lua_State* lua_state, int index, const Napi::Env& env) {
-    switch (lua_type(lua_state, index)) {
-    case LUA_TNUMBER:
-      return Napi::Number::New(env, lua_tonumber(lua_state, index));
-    case LUA_TSTRING:
-      return Napi::String::New(env, lua_tostring(lua_state, index));
-    case LUA_TBOOLEAN:
-      return Napi::Boolean::New(env, lua_toboolean(lua_state, index));
-    case LUA_TTABLE:
-      return luaTableToJsObject(lua_state, index, env);
-    case LUA_TNIL:
-      return env.Null();
-    default:
-      return env.Undefined();
-    }
+Napi::Value luaToJsValue(lua_State* lua_state, int index, const Napi::Env& env) {
+  switch (lua_type(lua_state, index)) {
+  case LUA_TNUMBER:
+    return Napi::Number::New(env, lua_tonumber(lua_state, index));
+  case LUA_TSTRING:
+    return Napi::String::New(env, lua_tostring(lua_state, index));
+  case LUA_TBOOLEAN:
+    return Napi::Boolean::New(env, lua_toboolean(lua_state, index));
+  case LUA_TTABLE:
+    return luaTableToJsObject(lua_state, index, env);
+  case LUA_TNIL:
+    return env.Null();
+  default:
+    return env.Undefined();
   }
+}
+
+namespace {
 
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
     Napi::Object result = Napi::Object::New(env);

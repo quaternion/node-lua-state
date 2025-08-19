@@ -1,0 +1,1 @@
+return { str = "foo", num = 1, bool = true }

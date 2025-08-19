@@ -1,7 +1,7 @@
 export declare class LuaState {
   constructor(opts?: LuaStateOptions);
-  evalFile(path: string): number;
-  eval(code: string): number;
+  evalFile(path: string): LuaValue | LuaValue[] | undefined;
+  eval(code: string): LuaValue | LuaValue[] | undefined;
   getGlobal(path: string): LuaValue | null | undefined;
   getLength(path: string): number | null | undefined;
   setGlobal(name: string, value: LuaValue | LuaFunction): this;
