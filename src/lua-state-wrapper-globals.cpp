@@ -13,13 +13,13 @@ extern "C" {
 namespace {
 
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env);
-  void pushJsValueToLua(lua_State* luaState, const Napi::Value& value);
+  void pushJsValueToLua(lua_State* lua_state, const Napi::Value& value);
 
   int callLuaWrappedJsFunction(lua_State* lua_state);
   int gcLuaWrappedJsFunction(lua_State* lua_state);
 
   enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
-  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State* luaState, const std::string& path);
+  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State* lua_state, const std::string& path);
 
   std::vector<std::string> splitLuaPath(const std::string& path);
 
