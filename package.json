@@ -1,0 +1,38 @@
+{
+  "name": "lua-state",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "license": "MIT",
+  "author": "quaternion",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "gypfile": false,
+  "preferUnplugged": true,
+  "repository": "https://github.com/quaternion/lua-state",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "binding.gyp"
+  ],
+  "binary": {
+    "module_name": "lua-state",
+    "module_path": "prebuilds/{platform}-{arch}/",
+    "napi_versions": [
+      8
+    ]
+  },
+  "scripts": {
+    "install": "node scripts/install-lua.js",
+    "pack:linux": "tar -czf lua-state-v1.0.0-napi-v8-linux-x64.tar.gz package.json prebuilds/linux-x64/",
+    "test": "node --expose-gc --test test/**/*.test.js"
+  },
+  "dependencies": {
+    "node-gyp-build": "^4.8.4",
+    "prebuild-install": "^7.1.3"
+  },
+  "devDependencies": {
+    "node-gyp": "^11.3.0",
+    "node-addon-api": "^8.5.0"
+  }
+}

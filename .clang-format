@@ -1,0 +1,19 @@
+BasedOnStyle: LLVM
+
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 120
+
+ContinuationIndentWidth: 2
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: BlockIndent
+BreakBeforeClosingParen: true
+
+NamespaceIndentation: All
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+AlignArrayOfStructures: Left
