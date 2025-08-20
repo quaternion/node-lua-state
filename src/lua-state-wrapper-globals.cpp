@@ -45,7 +45,7 @@ Napi::Value LuaStateWrapper::getLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  Napi::Value js_value = luaToJsValue(this->lua_state_, -1, env);
+  Napi::Value js_value = luaValueToJsValue(this->lua_state_, -1, env);
 
   lua_pop(this->lua_state_, 1);
 
@@ -109,7 +109,7 @@ Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   return info.This();
 }
 
-Napi::Value luaToJsValue(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
+Napi::Value luaValueToJsValue(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
   if (lua_stack_index < 0) {
     lua_stack_index = lua_gettop(lua_state) + lua_stack_index + 1;
   }
@@ -150,7 +150,7 @@ namespace {
         continue;
       }
 
-      Napi::Value value = luaToJsValue(lua_state, -1, env);
+      Napi::Value value = luaValueToJsValue(lua_state, -1, env);
       result.Set(key, value);
       lua_pop(lua_state, 1);
     }
@@ -214,7 +214,7 @@ namespace {
     int lua_nargs = lua_gettop(lua_state);
     std::vector<napi_value> js_args;
     for (int i = 2; i <= lua_nargs; ++i) {
-      js_args.push_back(luaToJsValue(lua_state, i, env));
+      js_args.push_back(luaValueToJsValue(lua_state, i, env));
     }
 
     Napi::Value js_function_result = function_holer->ref->Call(js_args);

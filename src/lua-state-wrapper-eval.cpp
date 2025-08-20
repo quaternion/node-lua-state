@@ -82,13 +82,13 @@ namespace {
     if (nres == 0) {
       return env.Undefined();
     } else if (nres == 1) {
-      Napi::Value out = luaToJsValue(lua_state, -1, env);
+      Napi::Value out = luaValueToJsValue(lua_state, -1, env);
       lua_settop(lua_state, nbase - 1);
       return out;
     } else {
       Napi::Array arr = Napi::Array::New(env, nres);
       for (int i = 0; i < nres; ++i) {
-        arr[i] = luaToJsValue(lua_state, -nres + i, env);
+        arr[i] = luaValueToJsValue(lua_state, -nres + i, env);
       }
       lua_settop(lua_state, nbase - 1);
       return arr;
