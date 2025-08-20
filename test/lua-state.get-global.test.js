@@ -9,23 +9,21 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
     luaState = new LuaState();
   });
 
-  it("should get a global number variable", () => {
-    luaState.eval(`num = 1`);
-    strictEqual(luaState.getGlobal("num"), 1);
-  });
+  describe("of primitive", () => {
+    it("should get a global number variable", () => {
+      luaState.eval(`num = 1`);
+      strictEqual(luaState.getGlobal("num"), 1);
+    });
 
-  it("should get a global string variable", () => {
-    luaState.eval(`str = 'foo'`);
-    strictEqual(luaState.getGlobal("str"), "foo");
-  });
+    it("should get a global string variable", () => {
+      luaState.eval(`str = 'foo'`);
+      strictEqual(luaState.getGlobal("str"), "foo");
+    });
 
-  it("should get a global boolean variable", () => {
-    luaState.eval(`bool = true`);
-    strictEqual(luaState.getGlobal("bool"), true);
-  });
-
-  it("should get null if the variable does not exist", () => {
-    strictEqual(luaState.getGlobal("missing"), null);
+    it("should get a global boolean variable", () => {
+      luaState.eval(`bool = true`);
+      strictEqual(luaState.getGlobal("bool"), true);
+    });
   });
 
   describe("of table", () => {
@@ -92,6 +90,22 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
           `variable "${path}" of type "${variableType}" expected "${expected}"`
         );
       });
+    });
+  });
+
+  describe("or array", () => {
+    beforeEach(() => {
+      luaState.eval(`tbl = { "foo", "bar" }`);
+    });
+
+    it("should returns table as object with number keys", () => {
+      deepStrictEqual(luaState.getGlobal("tbl"), { 1: "foo", 2: "bar" });
+    });
+  });
+
+  describe("of undefined", () => {
+    it("should get null if the variable does not exist", () => {
+      strictEqual(luaState.getGlobal("missing"), null);
     });
   });
 });

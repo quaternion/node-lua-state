@@ -109,16 +109,20 @@ Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   return info.This();
 }
 
-Napi::Value luaToJsValue(lua_State* lua_state, int index, const Napi::Env& env) {
-  switch (lua_type(lua_state, index)) {
+Napi::Value luaToJsValue(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
+  if (lua_stack_index < 0) {
+    lua_stack_index = lua_gettop(lua_state) + lua_stack_index + 1;
+  }
+
+  switch (lua_type(lua_state, lua_stack_index)) {
   case LUA_TNUMBER:
-    return Napi::Number::New(env, lua_tonumber(lua_state, index));
+    return Napi::Number::New(env, lua_tonumber(lua_state, lua_stack_index));
   case LUA_TSTRING:
-    return Napi::String::New(env, lua_tostring(lua_state, index));
+    return Napi::String::New(env, lua_tostring(lua_state, lua_stack_index));
   case LUA_TBOOLEAN:
-    return Napi::Boolean::New(env, lua_toboolean(lua_state, index));
+    return Napi::Boolean::New(env, lua_toboolean(lua_state, lua_stack_index));
   case LUA_TTABLE:
-    return luaTableToJsObject(lua_state, index, env);
+    return luaTableToJsObject(lua_state, lua_stack_index, env);
   case LUA_TNIL:
     return env.Null();
   default:
@@ -131,18 +135,23 @@ namespace {
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
     Napi::Object result = Napi::Object::New(env);
 
-    if (lua_stack_index < 0) {
-      lua_stack_index = lua_gettop(lua_state) + lua_stack_index + 1;
-    }
-
     lua_pushnil(lua_state);
 
     while (lua_next(lua_state, lua_stack_index)) {
-      if (lua_type(lua_state, -2) == LUA_TSTRING) {
-        const char* key = lua_tostring(lua_state, -2);
-        Napi::Value value = luaToJsValue(lua_state, -1, env);
-        result.Set(key, value);
+      auto key_type = lua_type(lua_state, -2);
+      Napi::Value key;
+
+      if (key_type == LUA_TSTRING) {
+        key = Napi::String::New(env, lua_tostring(lua_state, -2));
+      } else if (key_type == LUA_TNUMBER) {
+        key = Napi::Number::New(env, lua_tonumber(lua_state, -2));
+      } else {
+        lua_pop(lua_state, 1);
+        continue;
       }
+
+      Napi::Value value = luaToJsValue(lua_state, -1, env);
+      result.Set(key, value);
       lua_pop(lua_state, 1);
     }
 
