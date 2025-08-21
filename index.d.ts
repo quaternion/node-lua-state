@@ -4,7 +4,7 @@ export declare class LuaState {
   eval(code: string): LuaValue | LuaValue[] | undefined;
   getGlobal(path: string): LuaValue | null | undefined;
   getLength(path: string): number | null | undefined;
-  setGlobal(name: string, value: LuaValue | LuaFunction): this;
+  setGlobal(name: string, value: LuaValue): this;
 }
 
 type LuaStateOptions = Partial<{
@@ -24,8 +24,8 @@ type LuaLibName =
   | "table"
   | "utf8";
 
-type LuaValue = LuaPrimitiveValue | LuaTable;
-type LuaPrimitiveValue = string | number | boolean;
+type LuaValue = LuaPrimitive | LuaTable | LuaFunction;
+type LuaPrimitive = string | number | boolean;
 type LuaFunction = (...args: LuaValue[]) => LuaValue | void;
 type LuaTable = {
   [key: string]: LuaValue;

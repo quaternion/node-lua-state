@@ -1,6 +1,10 @@
 const { LuaState } = require("../index");
 const { beforeEach, describe, it, mock } = require("node:test");
-const { strictEqual, deepStrictEqual } = require("node:assert/strict");
+const {
+  deepStrictEqual,
+  doesNotThrow,
+  strictEqual,
+} = require("node:assert/strict");
 
 describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
   let luaState;
@@ -29,17 +33,17 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
   describe("of table", () => {
     beforeEach(() => {
       luaState.eval(`
-          tbl = {
-            str = 'foo',
-            num = 1,
-            bool = true,
-            inner = {
-              str = 'bar',
-              num = 2,
-              bool = false
-            }
+        tbl = {
+          str = 'foo',
+          num = 1,
+          bool = true,
+          inner = {
+            str = 'bar',
+            num = 2,
+            bool = false
           }
-        `);
+        }
+      `);
     });
 
     it("should get the whole table", () => {
@@ -104,8 +108,75 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
   });
 
   describe("of undefined", () => {
-    it("should get null if the variable does not exist", () => {
+    it("should returns null if the variable does not exist", () => {
       strictEqual(luaState.getGlobal("missing"), null);
+    });
+  });
+
+  describe("of function", () => {
+    describe("without arguments", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          function noArgs()
+            return "foo"
+          end
+        `);
+      });
+
+      it("should be callable without arguments", () => {
+        const fn = luaState.getGlobal("noArgs");
+        strictEqual(fn(), "foo");
+      });
+
+      it("should not throw if called with extra arguments", () => {
+        const fn = luaState.getGlobal("noArgs");
+        doesNotThrow(() => fn(1, 2));
+      });
+    });
+
+    describe("with arguments", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          function add(a, b)
+            return a + b
+          end
+        `);
+      });
+
+      it("should accept arguments and return correct result", () => {
+        const fn = luaState.getGlobal("add");
+        strictEqual(fn(2, 3), 5);
+      });
+    });
+
+    describe("returning single value", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          function square(x)
+            return x * x
+          end
+        `);
+      });
+
+      it("should return a number", () => {
+        const fn = luaState.getGlobal("square");
+        strictEqual(fn(4), 16);
+      });
+    });
+
+    describe("returning multiple values", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          function multi(x, y)
+            return x, y, x + y
+          end
+        `);
+      });
+
+      it("should return an array with multiple values", () => {
+        const fn = luaState.getGlobal("multi");
+        deepStrictEqual(fn(2, 5), [2, 5, 7]);
+      });
     });
   });
 });

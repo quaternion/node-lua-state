@@ -16,7 +16,7 @@
     "binding.gyp"
   ],
   "binary": {
-    "module_name": "lua-state",
+    "module_name": "node-lua-state",
     "module_path": "prebuilds/{platform}-{arch}/",
     "napi_versions": [
       8
