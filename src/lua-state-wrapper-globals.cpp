@@ -12,6 +12,7 @@ extern "C" {
 
 namespace {
 
+  Napi::Value luaValueToJsValue(lua_State* lua_state, int index, const Napi::Env& env);
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env);
   void pushJsValueToLua(lua_State* lua_state, const Napi::Value& value);
 
@@ -109,63 +110,6 @@ Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   return info.This();
 }
 
-Napi::Value luaValueToJsValue(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
-  if (lua_stack_index < 0) {
-    lua_stack_index = lua_gettop(lua_state) + lua_stack_index + 1;
-  }
-
-  switch (lua_type(lua_state, lua_stack_index)) {
-  case LUA_TNUMBER:
-    return Napi::Number::New(env, lua_tonumber(lua_state, lua_stack_index));
-  case LUA_TSTRING:
-    return Napi::String::New(env, lua_tostring(lua_state, lua_stack_index));
-  case LUA_TBOOLEAN:
-    return Napi::Boolean::New(env, lua_toboolean(lua_state, lua_stack_index));
-  case LUA_TTABLE:
-    return luaTableToJsObject(lua_state, lua_stack_index, env);
-  case LUA_TFUNCTION: {
-    lua_pushvalue(lua_state, lua_stack_index);
-    int lua_function_ref = luaL_ref(lua_state, LUA_REGISTRYINDEX);
-
-    int* lua_function_ref_ptr = new int(lua_function_ref);
-
-    auto js_function = Napi::Function::New(
-      env,
-      [lua_state, lua_function_ref_ptr](const Napi::CallbackInfo& info) -> Napi::Value {
-        lua_rawgeti(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
-
-        auto env = info.Env();
-        auto nargs = info.Length();
-
-        for (size_t i = 0; i < nargs; i++) {
-          pushJsValueToLua(lua_state, info[i]);
-        }
-
-        return callLuaFunctionOnStack(lua_state, env, nargs);
-      },
-      "luaProxyFunction"
-    );
-
-    js_function.AddFinalizer(
-      [lua_state](Napi::Env, int* lua_function_ref_ptr) {
-        if (lua_function_ref_ptr) {
-          // FIXME: some times this called after a lua state closed
-          // luaL_unref(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
-          delete lua_function_ref_ptr;
-        }
-      },
-      lua_function_ref_ptr
-    );
-
-    return js_function;
-  }
-  case LUA_TNIL:
-    return env.Null();
-  default:
-    return env.Undefined();
-  }
-}
-
 Napi::Value callLuaFunctionOnStack(lua_State* lua_state, const Napi::Env& env, const int nargs) {
   int nbase = lua_gettop(lua_state) - nargs - 1;
 
@@ -203,6 +147,63 @@ Napi::Value callLuaFunctionOnStack(lua_State* lua_state, const Napi::Env& env, c
 }
 
 namespace {
+
+  Napi::Value luaValueToJsValue(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
+    if (lua_stack_index < 0) {
+      lua_stack_index = lua_gettop(lua_state) + lua_stack_index + 1;
+    }
+
+    switch (lua_type(lua_state, lua_stack_index)) {
+    case LUA_TNUMBER:
+      return Napi::Number::New(env, lua_tonumber(lua_state, lua_stack_index));
+    case LUA_TSTRING:
+      return Napi::String::New(env, lua_tostring(lua_state, lua_stack_index));
+    case LUA_TBOOLEAN:
+      return Napi::Boolean::New(env, lua_toboolean(lua_state, lua_stack_index));
+    case LUA_TTABLE:
+      return luaTableToJsObject(lua_state, lua_stack_index, env);
+    case LUA_TFUNCTION: {
+      lua_pushvalue(lua_state, lua_stack_index);
+      int lua_function_ref = luaL_ref(lua_state, LUA_REGISTRYINDEX);
+
+      int* lua_function_ref_ptr = new int(lua_function_ref);
+
+      auto js_function = Napi::Function::New(
+        env,
+        [lua_state, lua_function_ref_ptr](const Napi::CallbackInfo& info) -> Napi::Value {
+          lua_rawgeti(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
+
+          auto env = info.Env();
+          auto nargs = info.Length();
+
+          for (size_t i = 0; i < nargs; i++) {
+            pushJsValueToLua(lua_state, info[i]);
+          }
+
+          return callLuaFunctionOnStack(lua_state, env, nargs);
+        },
+        "luaProxyFunction"
+      );
+
+      js_function.AddFinalizer(
+        [lua_state](Napi::Env, int* lua_function_ref_ptr) {
+          if (lua_function_ref_ptr) {
+            // FIXME: some times this called after a lua state closed
+            // luaL_unref(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
+            delete lua_function_ref_ptr;
+          }
+        },
+        lua_function_ref_ptr
+      );
+
+      return js_function;
+    }
+    case LUA_TNIL:
+      return env.Null();
+    default:
+      return env.Undefined();
+    }
+  }
 
   Napi::Value luaTableToJsObject(lua_State* lua_state, int lua_stack_index, const Napi::Env& env) {
     Napi::Object result = Napi::Object::New(env);

@@ -13,30 +13,6 @@ namespace {
 }
 
 /**
- * napi initializer
- */
-Napi::Object LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
-  Napi::Function lua_state_class = DefineClass(
-    env,
-    "LuaState",
-    {
-      InstanceMethod("evalFile", &LuaStateWrapper::evalLuaFile),
-      InstanceMethod("eval", &LuaStateWrapper::evalLuaString),
-      InstanceMethod("getGlobal", &LuaStateWrapper::getLuaGlobalValue),
-      InstanceMethod("getLength", &LuaStateWrapper::getLuaValueLength),
-      InstanceMethod("setGlobal", &LuaStateWrapper::setLuaGlobalValue),
-    }
-  );
-
-  Napi::FunctionReference* constructor = new Napi::FunctionReference(Napi::Persistent(lua_state_class));
-  env.SetInstanceData(constructor);
-
-  exports.Set("LuaState", lua_state_class);
-
-  return exports;
-}
-
-/**
  * constructor
  */
 LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaStateWrapper>(info) {
@@ -86,6 +62,30 @@ LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
  * destructor
  */
 LuaStateWrapper::~LuaStateWrapper() { lua_close(this->lua_state_); }
+
+/**
+ * napi initializer
+ */
+Napi::Object LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
+  Napi::Function lua_state_class = DefineClass(
+    env,
+    "LuaState",
+    {
+      InstanceMethod("evalFile", &LuaStateWrapper::evalLuaFile),
+      InstanceMethod("eval", &LuaStateWrapper::evalLuaString),
+      InstanceMethod("getGlobal", &LuaStateWrapper::getLuaGlobalValue),
+      InstanceMethod("getLength", &LuaStateWrapper::getLuaValueLength),
+      InstanceMethod("setGlobal", &LuaStateWrapper::setLuaGlobalValue),
+    }
+  );
+
+  Napi::FunctionReference* constructor = new Napi::FunctionReference(Napi::Persistent(lua_state_class));
+  env.SetInstanceData(constructor);
+
+  exports.Set("LuaState", lua_state_class);
+
+  return exports;
+}
 
 namespace {
 

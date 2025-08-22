@@ -8,10 +8,10 @@ extern "C" {
 
 class LuaStateWrapper : public Napi::ObjectWrap<LuaStateWrapper> {
 public:
-  static Napi::Object init(Napi::Env env, Napi::Object exports);
-
   LuaStateWrapper(const Napi::CallbackInfo& info);
   ~LuaStateWrapper();
+
+  static Napi::Object init(Napi::Env env, Napi::Object exports);
 
 private:
   lua_State* lua_state_;
