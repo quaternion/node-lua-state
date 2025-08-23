@@ -2,9 +2,7 @@
 
 #include <napi.h>
 
-extern "C" {
-#include <lua.h>
-}
+#include "lua-state-context.h"
 
 class LuaStateWrapper : public Napi::ObjectWrap<LuaStateWrapper> {
 public:
@@ -14,7 +12,7 @@ public:
   static Napi::Object init(Napi::Env env, Napi::Object exports);
 
 private:
-  lua_State* lua_state_;
+  LuaStateContext ctx_;
 
   // --- Eval methods
   Napi::Value evalLuaFile(const Napi::CallbackInfo& info);

@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "lua-compat-defines.h"
+#include "lua-state-context.h"
 #include "lua-state-wrapper-internal.h"
 #include "lua-state-wrapper.h"
 
@@ -39,16 +40,16 @@ Napi::Value LuaStateWrapper::getLuaGlobalValue(const Napi::CallbackInfo& info) {
 
   std::string path = info[0].As<Napi::String>();
 
-  auto push_path_status = pushLuaGlobalValueByPath(this->lua_state_, path);
+  auto push_path_status = pushLuaGlobalValueByPath(this->ctx_, path);
   if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
     return env.Null();
   } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
     return env.Undefined();
   }
 
-  Napi::Value js_value = luaValueToJsValue(this->lua_state_, -1, env);
+  Napi::Value js_value = luaValueToJsValue(this->ctx_, -1, env);
 
-  lua_pop(this->lua_state_, 1);
+  lua_pop(this->ctx_, 1);
 
   return js_value;
 }
@@ -66,7 +67,7 @@ Napi::Value LuaStateWrapper::getLuaValueLength(const Napi::CallbackInfo& info) {
 
   std::string path = info[0].As<Napi::String>();
 
-  auto push_path_status = pushLuaGlobalValueByPath(this->lua_state_, path);
+  auto push_path_status = pushLuaGlobalValueByPath(this->ctx_, path);
   if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
     return env.Null();
   } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
@@ -74,18 +75,18 @@ Napi::Value LuaStateWrapper::getLuaValueLength(const Napi::CallbackInfo& info) {
   }
 
   Napi::Value js_length;
-  int type = lua_type(this->lua_state_, -1);
+  int type = lua_type(this->ctx_, -1);
 
   if (type == LUA_TTABLE || type == LUA_TSTRING) {
-    lua_len(this->lua_state_, -1);
-    int length = lua_tointeger(this->lua_state_, -1);
-    lua_pop(this->lua_state_, 1);
+    lua_len(this->ctx_, -1);
+    int length = lua_tointeger(this->ctx_, -1);
+    lua_pop(this->ctx_, 1);
     js_length = Napi::Number::New(env, length);
   } else {
     js_length = env.Undefined();
   }
 
-  lua_pop(this->lua_state_, 1);
+  lua_pop(this->ctx_, 1);
 
   return js_length;
 }
@@ -104,8 +105,8 @@ Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   std::string name = info[0].As<Napi::String>();
   auto value = info[1].As<Napi::Value>();
 
-  pushJsValueToLua(this->lua_state_, value);
-  lua_setglobal(this->lua_state_, name.c_str());
+  pushJsValueToLua(this->ctx_, value);
+  lua_setglobal(this->ctx_, name.c_str());
 
   return info.This();
 }
@@ -182,14 +183,19 @@ namespace {
 
           return callLuaFunctionOnStack(lua_state, env, nargs);
         },
-        "luaProxyFunction"
+        "luaProxyFunction",
+        &lua_state
       );
 
       js_function.AddFinalizer(
-        [lua_state](Napi::Env, int* lua_function_ref_ptr) {
+        [lua_state](Napi::Env env, int* lua_function_ref_ptr) {
+          auto lua_state_context = LuaStateContext::from(lua_state);
+
+          if (lua_state_context) {
+            luaL_unref(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
+          }
+
           if (lua_function_ref_ptr) {
-            // FIXME: some times this called after a lua state closed
-            // luaL_unref(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
             delete lua_function_ref_ptr;
           }
         },

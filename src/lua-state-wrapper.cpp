@@ -16,8 +16,6 @@ namespace {
  * constructor
  */
 LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaStateWrapper>(info) {
-  this->lua_state_ = luaL_newstate();
-
   auto open_all_libs = true;
   std::vector<std::string> libs_for_open;
 
@@ -41,7 +39,7 @@ LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
   }
 
   if (open_all_libs) {
-    luaL_openlibs(this->lua_state_);
+    luaL_openlibs(this->ctx_);
   } else {
     auto lua_lib_functions_map = buildLuaLibFunctionsMap();
 
@@ -50,9 +48,9 @@ LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
       if (lua_lib_function_map_item == lua_lib_functions_map.end()) {
         continue;
       }
-      luaL_requiref(this->lua_state_, lib_for_open.c_str(), lua_lib_function_map_item->second, 1);
+      luaL_requiref(this->ctx_, lib_for_open.c_str(), lua_lib_function_map_item->second, 1);
       if (lib_for_open != "base") {
-        lua_pop(this->lua_state_, 1);
+        lua_pop(this->ctx_, 1);
       }
     }
   }
@@ -61,7 +59,7 @@ LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
 /**
  * destructor
  */
-LuaStateWrapper::~LuaStateWrapper() { lua_close(this->lua_state_); }
+LuaStateWrapper::~LuaStateWrapper() {}
 
 /**
  * napi initializer

@@ -20,16 +20,16 @@ Napi::Value LuaStateWrapper::evalLuaFile(const Napi::CallbackInfo& info) {
   }
 
   auto file_path = info[0].ToString().Utf8Value();
-  auto load_status = luaL_loadfile(this->lua_state_, file_path.c_str());
+  auto load_status = luaL_loadfile(this->ctx_, file_path.c_str());
 
   if (load_status != LUA_OK) {
-    auto error_message = lua_tostring(this->lua_state_, -1);
+    auto error_message = lua_tostring(this->ctx_, -1);
     Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
-    lua_pop(this->lua_state_, 1);
+    lua_pop(this->ctx_, 1);
     return env.Undefined();
   }
 
-  return callLuaFunctionOnStack(this->lua_state_, env, 0);
+  return callLuaFunctionOnStack(this->ctx_, env, 0);
 }
 
 /**
@@ -44,14 +44,14 @@ Napi::Value LuaStateWrapper::evalLuaString(const Napi::CallbackInfo& info) {
   }
 
   auto lua_code = info[0].As<Napi::String>().Utf8Value();
-  auto load_status = luaL_loadstring(this->lua_state_, lua_code.c_str());
+  auto load_status = luaL_loadstring(this->ctx_, lua_code.c_str());
 
   if (load_status != LUA_OK) {
-    auto error_message = lua_tostring(this->lua_state_, -1);
+    auto error_message = lua_tostring(this->ctx_, -1);
     Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
-    lua_pop(this->lua_state_, 1);
+    lua_pop(this->ctx_, 1);
     return env.Undefined();
   }
 
-  return callLuaFunctionOnStack(this->lua_state_, env, 0);
+  return callLuaFunctionOnStack(this->ctx_, env, 0);
 }
