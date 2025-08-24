@@ -167,12 +167,10 @@ namespace {
       lua_pushvalue(lua_state, lua_stack_index);
       int lua_function_ref = luaL_ref(lua_state, LUA_REGISTRYINDEX);
 
-      int* lua_function_ref_ptr = new int(lua_function_ref);
-
       auto js_function = Napi::Function::New(
         env,
-        [lua_state, lua_function_ref_ptr](const Napi::CallbackInfo& info) -> Napi::Value {
-          lua_rawgeti(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
+        [lua_state, lua_function_ref](const Napi::CallbackInfo& info) -> Napi::Value {
+          lua_rawgeti(lua_state, LUA_REGISTRYINDEX, lua_function_ref);
 
           auto env = info.Env();
           auto nargs = info.Length();
@@ -188,18 +186,14 @@ namespace {
       );
 
       js_function.AddFinalizer(
-        [lua_state](Napi::Env env, int* lua_function_ref_ptr) {
+        [lua_state, lua_function_ref](Napi::Env, void*) {
           auto lua_state_context = LuaStateContext::from(lua_state);
 
           if (lua_state_context) {
-            luaL_unref(lua_state, LUA_REGISTRYINDEX, *lua_function_ref_ptr);
-          }
-
-          if (lua_function_ref_ptr) {
-            delete lua_function_ref_ptr;
+            luaL_unref(lua_state, LUA_REGISTRYINDEX, lua_function_ref);
           }
         },
-        lua_function_ref_ptr
+        static_cast<void*>(nullptr)
       );
 
       return js_function;
