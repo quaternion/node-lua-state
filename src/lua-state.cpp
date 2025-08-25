@@ -8,6 +8,11 @@ extern "C" {
 #include <lualib.h>
 }
 
-Napi::Object initAll(Napi::Env env, Napi::Object exports) { return LuaStateWrapper::init(env, exports); }
+Napi::Object initAll(Napi::Env env, Napi::Object exports) {
+  LuaStateWrapper::init(env, exports);
 
-NODE_API_MODULE(LuaState, initAll);
+  return exports;
+}
+
+// clang-format off
+NODE_API_MODULE(lua-state, initAll);
