@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 extern "C" {
 #include <lua.h>
 }
@@ -19,4 +21,6 @@ private:
   lua_State* L_;
 
   static inline std::unordered_map<lua_State*, LuaStateContext*> contexts_;
+
+  void openLibs(const std::optional<std::vector<std::string>>&);
 };

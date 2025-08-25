@@ -7,10 +7,9 @@
     {
       "target_name": "lua-state",
       "sources": [ 
+        "src/lua-bridge.cpp",
         "src/lua-state-context.cpp",
-        "src/lua-state-wrapper.cpp" ,
-        "src/lua-state-wrapper-eval.cpp",
-        "src/lua-state-wrapper-globals.cpp",
+        "src/lua-state-wrapper.cpp" ,        
         "src/lua-state.cpp",        
         "<@(lua_sources)"
       ],

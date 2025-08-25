@@ -1,15 +1,12 @@
 #include <napi.h>
 
+#include "lua-bridge.h"
 #include "lua-compat-defines.h"
 #include "lua-state-wrapper.h"
 
 extern "C" {
 #include <lauxlib.h>
 #include <lualib.h>
-}
-
-namespace {
-  std::unordered_map<std::string, lua_CFunction> buildLuaLibFunctionsMap();
 }
 
 /**
@@ -39,20 +36,9 @@ LuaStateWrapper::LuaStateWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
   }
 
   if (open_all_libs) {
-    luaL_openlibs(this->ctx_);
+    this->ctx_.openLibs(std::nullopt);
   } else {
-    auto lua_lib_functions_map = buildLuaLibFunctionsMap();
-
-    for (const auto& lib_for_open : libs_for_open) {
-      auto lua_lib_function_map_item = lua_lib_functions_map.find(lib_for_open);
-      if (lua_lib_function_map_item == lua_lib_functions_map.end()) {
-        continue;
-      }
-      luaL_requiref(this->ctx_, lib_for_open.c_str(), lua_lib_function_map_item->second, 1);
-      if (lib_for_open != "base") {
-        lua_pop(this->ctx_, 1);
-      }
-    }
+    this->ctx_.openLibs(libs_for_open);
   }
 }
 
@@ -85,39 +71,135 @@ Napi::Object LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 
-namespace {
+/**
+ * evalLuaFile
+ */
+Napi::Value LuaStateWrapper::evalLuaFile(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
 
-  /**
-   * This function builds an unordered map of standard library function names to their
-   * lua_CFunction.  The names and functions are only included if they are #defined.
-   *
-   * @return a map of function names to functions
-   */
-  std::unordered_map<std::string, lua_CFunction> buildLuaLibFunctionsMap() {
-    std::unordered_map<std::string, lua_CFunction> map = {
-      {"base",    luaopen_base   },
-      {"debug",   luaopen_debug  },
-      {"io",      luaopen_io     },
-      {"math",    luaopen_math   },
-      {"os",      luaopen_os     },
-      {"package", luaopen_package},
-      {"string",  luaopen_string },
-      {"table",   luaopen_table  },
-    };
-
-#if LUA_VERSION_NUM >= 502 && LUA_VERSION_NUM < 504
-    map["bit32"] = luaopen_bit32;
-#endif
-
-#if LUA_VERSION_NUM >= 502
-    map["coroutine"] = luaopen_coroutine;
-#endif
-
-#if LUA_VERSION_NUM >= 503
-    map["utf8"] = luaopen_utf8;
-#endif
-
-    return map;
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
+    return env.Undefined();
   }
 
-} // namespace
+  auto file_path = info[0].ToString().Utf8Value();
+
+  auto load_status = luaL_loadfile(this->ctx_, file_path.c_str());
+
+  if (load_status != LUA_OK) {
+    auto error_message = lua_tostring(this->ctx_, -1);
+    Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
+    lua_pop(this->ctx_, 1);
+    return env.Undefined();
+  }
+
+  return LuaBridge::callLuaFunctionOnStack(this->ctx_, env, 0);
+}
+
+/**
+ * evalLuaString
+ */
+Napi::Value LuaStateWrapper::evalLuaString(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto lua_code = info[0].As<Napi::String>().Utf8Value();
+  auto load_status = luaL_loadstring(this->ctx_, lua_code.c_str());
+
+  if (load_status != LUA_OK) {
+    auto error_message = lua_tostring(this->ctx_, -1);
+    Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
+    lua_pop(this->ctx_, 1);
+    return env.Undefined();
+  }
+
+  return LuaBridge::callLuaFunctionOnStack(this->ctx_, env, 0);
+}
+
+/**
+ * getLuaGlobalValue
+ */
+Napi::Value LuaStateWrapper::getLuaGlobalValue(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  std::string path = info[0].As<Napi::String>();
+
+  auto push_path_status = LuaBridge::pushLuaGlobalValueByPath(this->ctx_, path);
+  if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::NotFound) {
+    return env.Null();
+  } else if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::BrokenPath) {
+    return env.Undefined();
+  }
+
+  Napi::Value js_value = LuaBridge::luaValueToJsValue(this->ctx_, -1, env);
+
+  lua_pop(this->ctx_, 1);
+
+  return js_value;
+}
+
+/**
+ * getLuaValueLength
+ */
+Napi::Value LuaStateWrapper::getLuaValueLength(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  std::string path = info[0].As<Napi::String>();
+
+  auto push_path_status = LuaBridge::pushLuaGlobalValueByPath(this->ctx_, path);
+  if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::NotFound) {
+    return env.Null();
+  } else if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::BrokenPath) {
+    return env.Undefined();
+  }
+
+  Napi::Value js_length;
+  int type = lua_type(this->ctx_, -1);
+
+  if (type == LUA_TTABLE || type == LUA_TSTRING) {
+    lua_len(this->ctx_, -1);
+    int length = lua_tointeger(this->ctx_, -1);
+    lua_pop(this->ctx_, 1);
+    js_length = Napi::Number::New(env, length);
+  } else {
+    js_length = env.Undefined();
+  }
+
+  lua_pop(this->ctx_, 1);
+
+  return js_length;
+}
+
+/**
+ * setLuaGlobalValue
+ */
+Napi::Value LuaStateWrapper::setLuaGlobalValue(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+
+  if (info.Length() < 2 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "First argument expected string").ThrowAsJavaScriptException();
+    return info.This();
+  }
+
+  std::string name = info[0].As<Napi::String>();
+  auto value = info[1].As<Napi::Value>();
+
+  LuaBridge::pushJsValueToLua(this->ctx_, value);
+  lua_setglobal(this->ctx_, name.c_str());
+
+  return info.This();
+}
