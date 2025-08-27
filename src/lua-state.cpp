@@ -1,5 +1,6 @@
 #include <napi.h>
 
+#include "lua-error.h"
 #include "lua-state-wrapper.h"
 
 extern "C" {
@@ -9,6 +10,7 @@ extern "C" {
 }
 
 Napi::Object initAll(Napi::Env env, Napi::Object exports) {
+  LuaError::init(env, exports);
   LuaStateWrapper::init(env, exports);
 
   return exports;

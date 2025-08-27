@@ -9,7 +9,7 @@ public:
   LuaStateWrapper(const Napi::CallbackInfo& info);
   ~LuaStateWrapper();
 
-  static Napi::Object init(Napi::Env env, Napi::Object exports);
+  static void init(Napi::Env env, Napi::Object exports);
 
 private:
   LuaStateContext ctx_;

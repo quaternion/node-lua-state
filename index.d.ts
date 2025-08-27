@@ -30,3 +30,5 @@ type LuaFunction = (...args: LuaValue[]) => LuaValue | void;
 type LuaTable = {
   [key: string]: LuaValue;
 };
+
+export declare class LuaError extends Error {}

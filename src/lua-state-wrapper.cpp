@@ -2,6 +2,7 @@
 
 #include "lua-bridge.h"
 #include "lua-compat-defines.h"
+#include "lua-error.h"
 #include "lua-state-wrapper.h"
 
 extern "C" {
@@ -50,7 +51,7 @@ LuaStateWrapper::~LuaStateWrapper() {}
 /**
  * napi initializer
  */
-Napi::Object LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
+void LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
   Napi::Function lua_state_class = DefineClass(
     env,
     "LuaState",
@@ -67,8 +68,6 @@ Napi::Object LuaStateWrapper::init(Napi::Env env, Napi::Object exports) {
   env.SetInstanceData(constructor);
 
   exports.Set("LuaState", lua_state_class);
-
-  return exports;
 }
 
 /**
@@ -88,7 +87,7 @@ Napi::Value LuaStateWrapper::evalLuaFile(const Napi::CallbackInfo& info) {
 
   if (load_status != LUA_OK) {
     auto error_message = lua_tostring(this->ctx_, -1);
-    Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
+    LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
     lua_pop(this->ctx_, 1);
     return env.Undefined();
   }
@@ -112,7 +111,7 @@ Napi::Value LuaStateWrapper::evalLuaString(const Napi::CallbackInfo& info) {
 
   if (load_status != LUA_OK) {
     auto error_message = lua_tostring(this->ctx_, -1);
-    Napi::Error::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
+    LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
     lua_pop(this->ctx_, 1);
     return env.Undefined();
   }
@@ -140,7 +139,7 @@ Napi::Value LuaStateWrapper::getLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  Napi::Value js_value = LuaBridge::luaValueToJsValue(this->ctx_, -1, env);
+  Napi::Value js_value = LuaBridge::luaValueToJsValue(this->ctx_, env, -1);
 
   lua_pop(this->ctx_, 1);
 

@@ -1,4 +1,4 @@
-const { LuaState } = require("../index");
+const { LuaError, LuaState } = require("../index");
 const { beforeEach, describe, it, mock } = require("node:test");
 const { deepStrictEqual, strictEqual, throws } = require("node:assert/strict");
 
@@ -47,8 +47,7 @@ describe(LuaState.name + "#" + LuaState.prototype.evalFile.name, () => {
     it("throws on syntax error", () => {
       throws(
         () => luaState.evalFile("test/fixtures/syntax_error.lua"),
-        Error,
-        /unexpected symbol/
+        LuaError
       );
     });
   });

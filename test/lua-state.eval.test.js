@@ -1,6 +1,7 @@
-const { LuaState } = require("../index");
+const { LuaError, LuaState } = require("../index");
 const { beforeEach, describe, it, mock } = require("node:test");
 const { deepStrictEqual, strictEqual, throws } = require("node:assert/strict");
+const { ok } = require("node:assert");
 
 describe(LuaState.name + "#" + LuaState.prototype.eval.name, () => {
   let luaState;
@@ -43,7 +44,7 @@ describe(LuaState.name + "#" + LuaState.prototype.eval.name, () => {
 
   describe("with syntax error", () => {
     it("throws on syntax error", () => {
-      throws(() => luaState.eval(`return 1+`), Error, /unexpected symbol/);
+      throws(() => luaState.eval(`return 1+`), LuaError);
     });
   });
 });
