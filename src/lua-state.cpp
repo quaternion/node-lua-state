@@ -1,4 +1,5 @@
 #include <napi.h>
+#include <variant>
 
 #include "lua-bridge.h"
 #include "lua-compat-defines.h"
@@ -77,17 +78,14 @@ Napi::Value LuaState::evalLuaFile(const Napi::CallbackInfo& info) {
   }
 
   auto file_path = info[0].ToString().Utf8Value();
+  auto eval_result = LuaBridge::evalLuaFile(this->ctx_, env, file_path);
 
-  auto load_status = luaL_loadfile(this->ctx_, file_path.c_str());
-
-  if (load_status != LUA_OK) {
-    auto error_message = lua_tostring(this->ctx_, -1);
-    LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
-    lua_pop(this->ctx_, 1);
+  if (std::holds_alternative<Napi::Error>(eval_result)) {
+    std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
-  return LuaBridge::callLuaFunctionOnStack(this->ctx_, env, 0);
+  return std::get<Napi::Value>(eval_result);
 }
 
 /**
@@ -102,16 +100,14 @@ Napi::Value LuaState::evalLuaString(const Napi::CallbackInfo& info) {
   }
 
   auto lua_code = info[0].As<Napi::String>().Utf8Value();
-  auto load_status = luaL_loadstring(this->ctx_, lua_code.c_str());
+  auto eval_result = LuaBridge::evalLuaString(this->ctx_, env, lua_code);
 
-  if (load_status != LUA_OK) {
-    auto error_message = lua_tostring(this->ctx_, -1);
-    LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error").ThrowAsJavaScriptException();
-    lua_pop(this->ctx_, 1);
+  if (std::holds_alternative<Napi::Error>(eval_result)) {
+    std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
-  return LuaBridge::callLuaFunctionOnStack(this->ctx_, env, 0);
+  return std::get<Napi::Value>(eval_result);
 }
 
 /**

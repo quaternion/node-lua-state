@@ -1,17 +1,21 @@
 #include <napi.h>
 #include <sstream>
+#include <variant>
 
 #include "lua-bridge.h"
 #include "lua-compat-defines.h"
+#include "lua-error.h"
 #include "lua-state-context.h"
 
 extern "C" {
 #include <lauxlib.h>
 #include <lua.h>
+#include <lualib.h>
 }
 
 namespace {
 
+  Napi::Value callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
   Napi::Value luaTableToJsObject(lua_State* L, const Napi::Env& env, int lua_stack_index);
   int callJsFunctionFromLuaCallback(lua_State* L);
   int gcJsFunctionFromLuaCallback(lua_State* L);
@@ -21,40 +25,28 @@ namespace {
 
 namespace LuaBridge {
 
-  Napi::Value callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
-    int nbase = lua_gettop(L) - nargs - 1;
+  std::variant<Napi::Value, Napi::Error> evalLuaFile(lua_State* L, const Napi::Env& env, const std::string& file_path) {
+    auto load_status = luaL_loadfile(L, file_path.c_str());
 
-    int status = lua_pcall(L, nargs, LUA_MULTRET, 0);
-    if (status != LUA_OK) {
-      const char* msg = lua_tostring(L, -1);
-      luaL_traceback(L, L, msg, 1);
-      const char* trace = lua_tostring(L, -1);
-      Napi::Error::New(env, trace ? trace : (msg ? msg : "Unknown Lua runtime error")).ThrowAsJavaScriptException();
+    if (load_status != LUA_OK) {
+      auto error_message = lua_tostring(L, -1);
       lua_pop(L, 1);
-      return env.Undefined();
+      return LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error");
     }
 
-    // return result
-    int ntop = lua_gettop(L);
+    return callLuaFunctionOnStack(L, env, 0);
+  }
 
-    int nres = ntop - nbase;
+  std::variant<Napi::Value, Napi::Error> evalLuaString(lua_State* L, const Napi::Env& env, const std::string& lua_code) {
+    auto load_status = luaL_loadstring(L, lua_code.c_str());
 
-    if (nres == 0) {
-      return env.Undefined();
+    if (load_status != LUA_OK) {
+      auto error_message = lua_tostring(L, -1);
+      lua_pop(L, 1);
+      return LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error");
     }
 
-    if (nres == 1) {
-      Napi::Value result = luaValueToJsValue(L, env, -1);
-      lua_settop(L, nbase);
-      return result;
-    }
-
-    Napi::Array arr = Napi::Array::New(env, nres);
-    for (int i = 0; i < nres; ++i) {
-      arr[i] = luaValueToJsValue(L, env, -nres + i);
-    }
-    lua_settop(L, nbase);
-    return arr;
+    return callLuaFunctionOnStack(L, env, 0);
   }
 
   Napi::Value luaValueToJsValue(lua_State* L, const Napi::Env& env, int lua_stack_index) {
@@ -189,6 +181,42 @@ namespace LuaBridge {
 } // namespace LuaBridge
 
 namespace {
+
+  Napi::Value callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
+    int nbase = lua_gettop(L) - nargs - 1;
+
+    int status = lua_pcall(L, nargs, LUA_MULTRET, 0);
+    if (status != LUA_OK) {
+      const char* msg = lua_tostring(L, -1);
+      luaL_traceback(L, L, msg, 1);
+      const char* trace = lua_tostring(L, -1);
+      Napi::Error::New(env, trace ? trace : (msg ? msg : "Unknown Lua runtime error")).ThrowAsJavaScriptException();
+      lua_pop(L, 1);
+      return env.Undefined();
+    }
+
+    // return result
+    int ntop = lua_gettop(L);
+
+    int nres = ntop - nbase;
+
+    if (nres == 0) {
+      return env.Undefined();
+    }
+
+    if (nres == 1) {
+      Napi::Value result = LuaBridge::luaValueToJsValue(L, env, -1);
+      lua_settop(L, nbase);
+      return result;
+    }
+
+    Napi::Array arr = Napi::Array::New(env, nres);
+    for (int i = 0; i < nres; ++i) {
+      arr[i] = LuaBridge::luaValueToJsValue(L, env, -nres + i);
+    }
+    lua_settop(L, nbase);
+    return arr;
+  }
 
   Napi::Value luaTableToJsObject(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
     Napi::Object result = Napi::Object::New(env);

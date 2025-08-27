@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi.h>
+#include <variant>
 
 extern "C" {
 #include <lua.h>
@@ -8,7 +9,8 @@ extern "C" {
 
 namespace LuaBridge {
 
-  Napi::Value callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
+  std::variant<Napi::Value, Napi::Error> evalLuaFile(lua_State*, const Napi::Env&, const std::string&);
+  std::variant<Napi::Value, Napi::Error> evalLuaString(lua_State*, const Napi::Env&, const std::string&);
 
   Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
   void pushJsValueToLua(lua_State*, const Napi::Value&);
