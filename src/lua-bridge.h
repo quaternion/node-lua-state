@@ -8,12 +8,12 @@ extern "C" {
 
 namespace LuaBridge {
 
-  Napi::Value callLuaFunctionOnStack(lua_State* lua_state, const Napi::Env& env, const int nargs);
+  Napi::Value callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
 
-  Napi::Value luaValueToJsValue(lua_State* lua_state, int index, const Napi::Env& env);
-  void pushJsValueToLua(lua_State* lua_state, const Napi::Value& value);
+  Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
+  void pushJsValueToLua(lua_State*, const Napi::Value&);
 
   enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
-  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State* lua_state, const std::string& path);
+  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State*, const std::string&);
 
 } // namespace LuaBridge
