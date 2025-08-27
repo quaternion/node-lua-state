@@ -7,9 +7,8 @@
 class LuaState : public Napi::ObjectWrap<LuaState> {
 public:
   LuaState(const Napi::CallbackInfo& info);
-  ~LuaState();
 
-  static void init(Napi::Env env, Napi::Object exports);
+  static void Init(Napi::Env env, Napi::Object exports);
 
 private:
   LuaStateContext ctx_;

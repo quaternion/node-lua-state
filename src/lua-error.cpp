@@ -4,7 +4,7 @@
 /**
  * napi initializer
  */
-void LuaError::init(Napi::Env env, Napi::Object exports) {
+void LuaError::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function lua_error_js_class = Napi::Function::New(
     env,
     [](const Napi::CallbackInfo& info) {

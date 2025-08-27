@@ -9,12 +9,12 @@ extern "C" {
 #include <lualib.h>
 }
 
-Napi::Object initAll(Napi::Env env, Napi::Object exports) {
-  LuaError::init(env, exports);
-  LuaState::init(env, exports);
+Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
+  LuaError::Init(env, exports);
+  LuaState::Init(env, exports);
 
   return exports;
 }
 
 // clang-format off
-NODE_API_MODULE(lua-state, initAll);
+NODE_API_MODULE(lua-state, InitAll);

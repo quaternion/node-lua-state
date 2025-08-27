@@ -44,14 +44,9 @@ LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(
 }
 
 /**
- * destructor
- */
-LuaState::~LuaState() {}
-
-/**
  * napi initializer
  */
-void LuaState::init(Napi::Env env, Napi::Object exports) {
+void LuaState::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function lua_state_class = DefineClass(
     env,
     "LuaState",
