@@ -9,7 +9,10 @@
   "types": "index.d.ts",
   "gypfile": false,
   "preferUnplugged": true,
-  "repository": "https://github.com/quaternion/lua-state",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:quaternion/node-lua-state.git"
+  },
   "files": [
     "index.js",
     "index.d.ts",
