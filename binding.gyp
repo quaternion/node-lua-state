@@ -6,12 +6,12 @@
   "targets": [
     {
       "target_name": "lua-state",
-      "sources": [ 
+      "sources": [
+        "src/init.cpp",
         "src/lua-bridge.cpp",
         "src/lua-error.cpp",
         "src/lua-state-context.cpp",
-        "src/lua-state-wrapper.cpp" ,        
-        "src/lua-state.cpp",        
+        "src/lua-state.cpp",
         "<@(lua_sources)"
       ],
       "include_dirs": [
@@ -22,7 +22,7 @@
       ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
-      "variables": {        
+      "variables": {
         "lua_sources": "<!(node scripts/list-lua-sources.js <(lua_src_dir))"
       }
     }

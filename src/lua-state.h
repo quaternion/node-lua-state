@@ -4,10 +4,10 @@
 
 #include "lua-state-context.h"
 
-class LuaStateWrapper : public Napi::ObjectWrap<LuaStateWrapper> {
+class LuaState : public Napi::ObjectWrap<LuaState> {
 public:
-  LuaStateWrapper(const Napi::CallbackInfo& info);
-  ~LuaStateWrapper();
+  LuaState(const Napi::CallbackInfo& info);
+  ~LuaState();
 
   static void init(Napi::Env env, Napi::Object exports);
 

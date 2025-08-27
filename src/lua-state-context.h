@@ -7,7 +7,7 @@ extern "C" {
 }
 
 class LuaStateContext {
-  friend class LuaStateWrapper;
+  friend class LuaState;
 
 public:
   operator lua_State*() const;
