@@ -19,13 +19,14 @@ namespace {
   Napi::Value luaTableToJsObject(lua_State* L, const Napi::Env& env, int lua_stack_index);
   int callJsFunctionFromLuaCallback(lua_State* L);
   int gcJsFunctionFromLuaCallback(lua_State* L);
-  std::vector<std::string> splitLuaPath(const std::string& path);
 
   Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
   void pushJsValueToLua(lua_State*, const Napi::Value&);
 
   enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
   PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State*, const std::string&);
+
+  std::vector<std::string> splitLuaPath(const std::string& path);
 
 } // namespace
 

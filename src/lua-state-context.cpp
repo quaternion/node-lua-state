@@ -1,5 +1,6 @@
 #include <napi.h>
 
+#include "lua-compat-defines.h"
 #include "lua-state-context.h"
 
 extern "C" {
