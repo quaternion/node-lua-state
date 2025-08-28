@@ -16,15 +16,17 @@ extern "C" {
 namespace {
 
   Napi::Value callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
-  Napi::Value luaTableToJsObject(lua_State* L, const Napi::Env& env, int lua_stack_index);
+
+  Napi::Value popJsValueFromStack(lua_State*, const Napi::Env&, int);
+  Napi::Value popJsObjectFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index);
+
+  void pushJsValueToStack(lua_State*, const Napi::Value&);
+
+  enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
+  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State*, const std::string&);
+
   int callJsFunctionFromLuaCallback(lua_State* L);
   int gcJsFunctionFromLuaCallback(lua_State* L);
-
-  Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
-  void pushJsValueToLua(lua_State*, const Napi::Value&);
-
-  enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
-  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State*, const std::string&);
 
   std::vector<std::string> splitLuaPath(const std::string& path);
 
@@ -32,7 +34,7 @@ namespace {
 
 namespace LuaBridge {
 
-  std::variant<Napi::Value, Napi::Error> evalLuaFile(lua_State* L, const Napi::Env& env, const std::string& file_path) {
+  std::variant<Napi::Value, Napi::Error> evalFile(lua_State* L, const Napi::Env& env, const std::string& file_path) {
     auto load_status = luaL_loadfile(L, file_path.c_str());
 
     if (load_status != LUA_OK) {
@@ -44,7 +46,7 @@ namespace LuaBridge {
     return callLuaFunctionOnStack(L, env, 0);
   }
 
-  std::variant<Napi::Value, Napi::Error> evalLuaString(lua_State* L, const Napi::Env& env, const std::string& lua_code) {
+  std::variant<Napi::Value, Napi::Error> evalString(lua_State* L, const Napi::Env& env, const std::string& lua_code) {
     auto load_status = luaL_loadstring(L, lua_code.c_str());
 
     if (load_status != LUA_OK) {
@@ -56,15 +58,15 @@ namespace LuaBridge {
     return callLuaFunctionOnStack(L, env, 0);
   }
 
-  Napi::Value getLuaGlobalValueByPath(lua_State* L, const Napi::Env& env, const std::string& lua_value_path) {
-    auto push_path_status = pushLuaGlobalValueByPath(L, lua_value_path);
-    if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
+  Napi::Value getLuaValueByPath(lua_State* L, const Napi::Env& env, const std::string& lua_value_path) {
+    auto push_path_status = pushLuaValueByPathToStack(L, lua_value_path);
+    if (push_path_status == PushLuaValueByPathToStackStatus::NotFound) {
       return env.Null();
-    } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
+    } else if (push_path_status == PushLuaValueByPathToStackStatus::BrokenPath) {
       return env.Undefined();
     }
 
-    Napi::Value js_value = luaValueToJsValue(L, env, -1);
+    Napi::Value js_value = popJsValueFromStack(L, env, -1);
 
     lua_pop(L, 1);
 
@@ -72,10 +74,10 @@ namespace LuaBridge {
   }
 
   Napi::Value getLuaValueLengthByPath(lua_State* L, const Napi::Env& env, const std::string& lua_value_path) {
-    auto push_path_status = pushLuaGlobalValueByPath(L, lua_value_path);
-    if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
+    auto push_path_status = pushLuaValueByPathToStack(L, lua_value_path);
+    if (push_path_status == PushLuaValueByPathToStackStatus::NotFound) {
       return env.Null();
-    } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
+    } else if (push_path_status == PushLuaValueByPathToStackStatus::BrokenPath) {
       return env.Undefined();
     }
 
@@ -96,8 +98,8 @@ namespace LuaBridge {
     return result;
   }
 
-  void setLuaGlobalValue(lua_State* L, const std::string& name, const Napi::Value& value) {
-    pushJsValueToLua(L, value);
+  void setLuaValue(lua_State* L, const std::string& name, const Napi::Value& value) {
+    pushJsValueToStack(L, value);
     lua_setglobal(L, name.c_str());
   }
 
@@ -105,7 +107,7 @@ namespace LuaBridge {
 
 namespace {
 
-  Napi::Value luaValueToJsValue(lua_State* L, const Napi::Env& env, int lua_stack_index) {
+  Napi::Value popJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
     if (lua_stack_index < 0) {
       lua_stack_index = lua_gettop(L) + lua_stack_index + 1;
     }
@@ -118,7 +120,7 @@ namespace {
     case LUA_TBOOLEAN:
       return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
     case LUA_TTABLE:
-      return luaTableToJsObject(L, env, lua_stack_index);
+      return popJsObjectFromStack(L, env, lua_stack_index);
     case LUA_TFUNCTION: {
       lua_pushvalue(L, lua_stack_index);
       int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -132,7 +134,7 @@ namespace {
           auto nargs = info.Length();
 
           for (size_t i = 0; i < nargs; i++) {
-            pushJsValueToLua(L, info[i]);
+            pushJsValueToStack(L, info[i]);
           }
 
           return callLuaFunctionOnStack(L, env, nargs);
@@ -165,7 +167,7 @@ namespace {
     Napi::FunctionReference* ref;
   };
 
-  void pushJsValueToLua(lua_State* L, const Napi::Value& value) {
+  void pushJsValueToStack(lua_State* L, const Napi::Value& value) {
     if (value.IsUndefined() || value.IsNull()) {
       lua_pushnil(L);
     } else if (value.IsString()) {
@@ -195,7 +197,7 @@ namespace {
 
       for (uint32_t i = 0; i < keys.Length(); i++) {
         std::string key = keys.Get(i).As<Napi::String>().Utf8Value();
-        pushJsValueToLua(L, obj.Get(key));
+        pushJsValueToStack(L, obj.Get(key));
         lua_setfield(L, -2, key.c_str());
       }
     } else {
@@ -203,23 +205,23 @@ namespace {
     }
   }
 
-  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State* L, const std::string& path) {
+  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State* L, const std::string& path) {
     std::vector<std::string> parts = splitLuaPath(path);
 
     if (parts.empty()) {
-      return PushLuaGlobalValueByPathStatus::NotFound;
+      return PushLuaValueByPathToStackStatus::NotFound;
     }
 
     lua_getglobal(L, parts[0].c_str());
     if (lua_isnil(L, -1)) {
       lua_pop(L, 1);
-      return PushLuaGlobalValueByPathStatus::NotFound;
+      return PushLuaValueByPathToStackStatus::NotFound;
     }
 
     for (size_t i = 1; i < parts.size(); i++) {
       if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
-        return PushLuaGlobalValueByPathStatus::BrokenPath;
+        return PushLuaValueByPathToStackStatus::BrokenPath;
       }
 
       lua_getfield(L, -1, parts[i].c_str());
@@ -227,11 +229,11 @@ namespace {
 
       if (lua_isnil(L, -1)) {
         lua_pop(L, 1);
-        return PushLuaGlobalValueByPathStatus::BrokenPath;
+        return PushLuaValueByPathToStackStatus::BrokenPath;
       }
     }
 
-    return PushLuaGlobalValueByPathStatus::Found;
+    return PushLuaValueByPathToStackStatus::Found;
   }
 
   Napi::Value callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
@@ -257,20 +259,20 @@ namespace {
     }
 
     if (nres == 1) {
-      Napi::Value result = luaValueToJsValue(L, env, -1);
+      Napi::Value result = popJsValueFromStack(L, env, -1);
       lua_settop(L, nbase);
       return result;
     }
 
     Napi::Array arr = Napi::Array::New(env, nres);
     for (int i = 0; i < nres; ++i) {
-      arr[i] = luaValueToJsValue(L, env, -nres + i);
+      arr[i] = popJsValueFromStack(L, env, -nres + i);
     }
     lua_settop(L, nbase);
     return arr;
   }
 
-  Napi::Value luaTableToJsObject(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
+  Napi::Value popJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
     Napi::Object result = Napi::Object::New(env);
 
     lua_pushnil(L);
@@ -288,7 +290,7 @@ namespace {
         continue;
       }
 
-      Napi::Value value = luaValueToJsValue(L, env, -1);
+      Napi::Value value = popJsValueFromStack(L, env, -1);
       result.Set(key, value);
       lua_pop(L, 1);
     }
@@ -310,13 +312,13 @@ namespace {
     int lua_nargs = lua_gettop(L);
     std::vector<napi_value> js_args;
     for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = luaValueToJsValue(L, env, i);
+      auto js_arg = popJsValueFromStack(L, env, i);
       js_args.push_back(js_arg);
     }
 
     Napi::Value js_function_result = function_holer->ref->Call(js_args);
 
-    pushJsValueToLua(L, js_function_result);
+    pushJsValueToStack(L, js_function_result);
 
     return 1;
   }
