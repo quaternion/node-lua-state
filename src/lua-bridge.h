@@ -12,10 +12,9 @@ namespace LuaBridge {
   std::variant<Napi::Value, Napi::Error> evalLuaFile(lua_State*, const Napi::Env&, const std::string&);
   std::variant<Napi::Value, Napi::Error> evalLuaString(lua_State*, const Napi::Env&, const std::string&);
 
-  Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
-  void pushJsValueToLua(lua_State*, const Napi::Value&);
+  Napi::Value getLuaGlobalValueByPath(lua_State*, const Napi::Env&, const std::string&);
+  Napi::Value getLuaValueLengthByPath(lua_State*, const Napi::Env&, const std::string&);
 
-  enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
-  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State*, const std::string&);
+  void setLuaGlobalValue(lua_State*, const std::string&, const Napi::Value&);
 
 } // namespace LuaBridge

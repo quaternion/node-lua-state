@@ -21,6 +21,12 @@ namespace {
   int gcJsFunctionFromLuaCallback(lua_State* L);
   std::vector<std::string> splitLuaPath(const std::string& path);
 
+  Napi::Value luaValueToJsValue(lua_State*, const Napi::Env&, int);
+  void pushJsValueToLua(lua_State*, const Napi::Value&);
+
+  enum class PushLuaGlobalValueByPathStatus { NotFound, BrokenPath, Found };
+  PushLuaGlobalValueByPathStatus pushLuaGlobalValueByPath(lua_State*, const std::string&);
+
 } // namespace
 
 namespace LuaBridge {
@@ -48,6 +54,55 @@ namespace LuaBridge {
 
     return callLuaFunctionOnStack(L, env, 0);
   }
+
+  Napi::Value getLuaGlobalValueByPath(lua_State* L, const Napi::Env& env, const std::string& lua_value_path) {
+    auto push_path_status = pushLuaGlobalValueByPath(L, lua_value_path);
+    if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
+      return env.Null();
+    } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
+      return env.Undefined();
+    }
+
+    Napi::Value js_value = luaValueToJsValue(L, env, -1);
+
+    lua_pop(L, 1);
+
+    return js_value;
+  }
+
+  Napi::Value getLuaValueLengthByPath(lua_State* L, const Napi::Env& env, const std::string& lua_value_path) {
+    auto push_path_status = pushLuaGlobalValueByPath(L, lua_value_path);
+    if (push_path_status == PushLuaGlobalValueByPathStatus::NotFound) {
+      return env.Null();
+    } else if (push_path_status == PushLuaGlobalValueByPathStatus::BrokenPath) {
+      return env.Undefined();
+    }
+
+    Napi::Value result;
+    int type = lua_type(L, -1);
+
+    if (type == LUA_TTABLE || type == LUA_TSTRING) {
+      lua_len(L, -1);
+      int length = lua_tointeger(L, -1);
+      lua_pop(L, 1);
+      result = Napi::Number::New(env, length);
+    } else {
+      result = env.Undefined();
+    }
+
+    lua_pop(L, 1);
+
+    return result;
+  }
+
+  void setLuaGlobalValue(lua_State* L, const std::string& name, const Napi::Value& value) {
+    pushJsValueToLua(L, value);
+    lua_setglobal(L, name.c_str());
+  }
+
+} // namespace LuaBridge
+
+namespace {
 
   Napi::Value luaValueToJsValue(lua_State* L, const Napi::Env& env, int lua_stack_index) {
     if (lua_stack_index < 0) {
@@ -178,10 +233,6 @@ namespace LuaBridge {
     return PushLuaGlobalValueByPathStatus::Found;
   }
 
-} // namespace LuaBridge
-
-namespace {
-
   Napi::Value callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
     int nbase = lua_gettop(L) - nargs - 1;
 
@@ -205,14 +256,14 @@ namespace {
     }
 
     if (nres == 1) {
-      Napi::Value result = LuaBridge::luaValueToJsValue(L, env, -1);
+      Napi::Value result = luaValueToJsValue(L, env, -1);
       lua_settop(L, nbase);
       return result;
     }
 
     Napi::Array arr = Napi::Array::New(env, nres);
     for (int i = 0; i < nres; ++i) {
-      arr[i] = LuaBridge::luaValueToJsValue(L, env, -nres + i);
+      arr[i] = luaValueToJsValue(L, env, -nres + i);
     }
     lua_settop(L, nbase);
     return arr;
@@ -236,7 +287,7 @@ namespace {
         continue;
       }
 
-      Napi::Value value = LuaBridge::luaValueToJsValue(L, env, -1);
+      Napi::Value value = luaValueToJsValue(L, env, -1);
       result.Set(key, value);
       lua_pop(L, 1);
     }
@@ -245,7 +296,7 @@ namespace {
   }
 
   int callJsFunctionFromLuaCallback(lua_State* L) {
-    auto* function_holer = static_cast<LuaBridge::JsFunctionHolder*>(lua_touserdata(L, 1));
+    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
 
     if (!function_holer || !function_holer->ref) {
       return luaL_error(L, "Invalid js function reference");
@@ -258,19 +309,19 @@ namespace {
     int lua_nargs = lua_gettop(L);
     std::vector<napi_value> js_args;
     for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = LuaBridge::luaValueToJsValue(L, env, i);
+      auto js_arg = luaValueToJsValue(L, env, i);
       js_args.push_back(js_arg);
     }
 
     Napi::Value js_function_result = function_holer->ref->Call(js_args);
 
-    LuaBridge::pushJsValueToLua(L, js_function_result);
+    pushJsValueToLua(L, js_function_result);
 
     return 1;
   }
 
   int gcJsFunctionFromLuaCallback(lua_State* L) {
-    auto* function_holer = static_cast<LuaBridge::JsFunctionHolder*>(lua_touserdata(L, 1));
+    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
 
     if (function_holer && function_holer->ref) {
       delete function_holer->ref;

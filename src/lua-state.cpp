@@ -2,14 +2,7 @@
 #include <variant>
 
 #include "lua-bridge.h"
-#include "lua-compat-defines.h"
-#include "lua-error.h"
 #include "lua-state.h"
-
-extern "C" {
-#include <lauxlib.h>
-#include <lualib.h>
-}
 
 /**
  * constructor
@@ -121,20 +114,9 @@ Napi::Value LuaState::getLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  std::string path = info[0].As<Napi::String>();
+  std::string lua_value_path = info[0].As<Napi::String>();
 
-  auto push_path_status = LuaBridge::pushLuaGlobalValueByPath(this->ctx_, path);
-  if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::NotFound) {
-    return env.Null();
-  } else if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::BrokenPath) {
-    return env.Undefined();
-  }
-
-  Napi::Value js_value = LuaBridge::luaValueToJsValue(this->ctx_, env, -1);
-
-  lua_pop(this->ctx_, 1);
-
-  return js_value;
+  return LuaBridge::getLuaGlobalValueByPath(this->ctx_, env, lua_value_path);
 }
 
 /**
@@ -148,30 +130,9 @@ Napi::Value LuaState::getLuaValueLength(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  std::string path = info[0].As<Napi::String>();
+  std::string lua_value_path = info[0].As<Napi::String>();
 
-  auto push_path_status = LuaBridge::pushLuaGlobalValueByPath(this->ctx_, path);
-  if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::NotFound) {
-    return env.Null();
-  } else if (push_path_status == LuaBridge::PushLuaGlobalValueByPathStatus::BrokenPath) {
-    return env.Undefined();
-  }
-
-  Napi::Value js_length;
-  int type = lua_type(this->ctx_, -1);
-
-  if (type == LUA_TTABLE || type == LUA_TSTRING) {
-    lua_len(this->ctx_, -1);
-    int length = lua_tointeger(this->ctx_, -1);
-    lua_pop(this->ctx_, 1);
-    js_length = Napi::Number::New(env, length);
-  } else {
-    js_length = env.Undefined();
-  }
-
-  lua_pop(this->ctx_, 1);
-
-  return js_length;
+  return LuaBridge::getLuaValueLengthByPath(this->ctx_, env, lua_value_path);
 }
 
 /**
@@ -188,8 +149,7 @@ Napi::Value LuaState::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   std::string name = info[0].As<Napi::String>();
   auto value = info[1].As<Napi::Value>();
 
-  LuaBridge::pushJsValueToLua(this->ctx_, value);
-  lua_setglobal(this->ctx_, name.c_str());
+  LuaBridge::setLuaGlobalValue(this->ctx_, name, value);
 
   return info.This();
 }
