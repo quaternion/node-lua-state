@@ -15,7 +15,7 @@ extern "C" {
 
 namespace {
 
-  Napi::Value callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
+  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
 
   Napi::Value popJsValueFromStack(lua_State*, const Napi::Env&, int);
   Napi::Value popJsObjectFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index);
@@ -28,6 +28,8 @@ namespace {
   int callJsFunctionFromLuaCallback(lua_State* L);
   int gcJsFunctionFromLuaCallback(lua_State* L);
 
+  Napi::Error popErrorFromStack(lua_State*, const Napi::Env&);
+
   std::vector<std::string> splitLuaPath(const std::string& path);
 
 } // namespace
@@ -38,9 +40,7 @@ namespace LuaBridge {
     auto load_status = luaL_loadfile(L, file_path.c_str());
 
     if (load_status != LUA_OK) {
-      auto error_message = lua_tostring(L, -1);
-      lua_pop(L, 1);
-      return LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error");
+      return popErrorFromStack(L, env);
     }
 
     return callLuaFunctionOnStack(L, env, 0);
@@ -50,9 +50,7 @@ namespace LuaBridge {
     auto load_status = luaL_loadstring(L, lua_code.c_str());
 
     if (load_status != LUA_OK) {
-      auto error_message = lua_tostring(L, -1);
-      lua_pop(L, 1);
-      return LuaError::New(env, error_message ? error_message : "Unknown Lua syntax error");
+      return popErrorFromStack(L, env);
     }
 
     return callLuaFunctionOnStack(L, env, 0);
@@ -137,7 +135,14 @@ namespace {
             pushJsValueToStack(L, info[i]);
           }
 
-          return callLuaFunctionOnStack(L, env, nargs);
+          auto result = callLuaFunctionOnStack(L, env, nargs);
+
+          if (std::holds_alternative<Napi::Error>(result)) {
+            std::get<Napi::Error>(result).ThrowAsJavaScriptException();
+            return env.Undefined();
+          }
+
+          return std::get<Napi::Value>(result);
         },
         "luaProxyFunction",
         &L
@@ -236,17 +241,12 @@ namespace {
     return PushLuaValueByPathToStackStatus::Found;
   }
 
-  Napi::Value callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
+  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
     int nbase = lua_gettop(L) - nargs - 1;
 
     int status = lua_pcall(L, nargs, LUA_MULTRET, 0);
     if (status != LUA_OK) {
-      const char* msg = lua_tostring(L, -1);
-      luaL_traceback(L, L, msg, 1);
-      const char* trace = lua_tostring(L, -1);
-      Napi::Error::New(env, trace ? trace : (msg ? msg : "Unknown Lua runtime error")).ThrowAsJavaScriptException();
-      lua_pop(L, 1);
-      return env.Undefined();
+      return popErrorFromStack(L, env);
     }
 
     // return result
@@ -332,6 +332,25 @@ namespace {
     }
 
     return 0;
+  }
+
+  Napi::Error popErrorFromStack(lua_State* L, const Napi::Env& env) {
+    const char* message = nullptr;
+
+    if (lua_gettop(L) > 0) {
+      message = lua_tostring(L, -1);
+      lua_pop(L, 1);
+    }
+
+    if (!message) {
+      message = "Unknown Lua error";
+    }
+
+    luaL_traceback(L, L, nullptr, 1);
+    const char* stack = lua_tostring(L, -1);
+    lua_pop(L, 1);
+
+    return LuaError::New(env, message, stack ? stack : "");
   }
 
   std::vector<std::string> splitLuaPath(const std::string& path) {
