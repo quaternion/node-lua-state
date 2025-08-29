@@ -241,10 +241,50 @@ namespace {
     return PushLuaValueByPathToStackStatus::Found;
   }
 
-  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
-    int nbase = lua_gettop(L) - nargs - 1;
+  Napi::Error popErrorFromStack(lua_State* L, const Napi::Env& env) {
+    const char* raw_full = lua_tostring(L, -1);
+    lua_pop(L, 1);
 
-    int status = lua_pcall(L, nargs, LUA_MULTRET, 0);
+    std::string full = raw_full ? raw_full : "Unknown Lua error";
+
+    auto eol_pos = full.find('\n');
+
+    std::string message, trace;
+
+    if (eol_pos != std::string::npos) {
+      message = full.substr(0, eol_pos);
+      trace = full.substr(eol_pos + 1);
+    } else {
+      message = full;
+      trace = "";
+    }
+
+    return LuaError::New(env, message, trace);
+  }
+
+  int traceback(lua_State* L) {
+    const char* msg = lua_tostring(L, 1);
+    if (!msg) {
+      msg = "Unknown Lua error";
+    }
+
+    luaL_traceback(L, L, msg, 1);
+    return 1;
+  }
+
+  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
+    // function stack index
+    int fn_index = lua_gettop(L) - nargs;
+
+    // stack index without function and arguments
+    int pivot_index = fn_index - 1;
+
+    // push traceback function
+    lua_pushcfunction(L, traceback);
+    lua_insert(L, fn_index);
+    pivot_index++;
+
+    int status = lua_pcall(L, nargs, LUA_MULTRET, fn_index);
     if (status != LUA_OK) {
       return popErrorFromStack(L, env);
     }
@@ -252,7 +292,7 @@ namespace {
     // return result
     int ntop = lua_gettop(L);
 
-    int nres = ntop - nbase;
+    int nres = ntop - pivot_index;
 
     if (nres == 0) {
       return env.Undefined();
@@ -260,7 +300,7 @@ namespace {
 
     if (nres == 1) {
       Napi::Value result = popJsValueFromStack(L, env, -1);
-      lua_settop(L, nbase);
+      lua_settop(L, pivot_index);
       return result;
     }
 
@@ -268,7 +308,7 @@ namespace {
     for (int i = 0; i < nres; ++i) {
       arr[i] = popJsValueFromStack(L, env, -nres + i);
     }
-    lua_settop(L, nbase);
+    lua_settop(L, pivot_index);
     return arr;
   }
 
@@ -332,25 +372,6 @@ namespace {
     }
 
     return 0;
-  }
-
-  Napi::Error popErrorFromStack(lua_State* L, const Napi::Env& env) {
-    const char* message = nullptr;
-
-    if (lua_gettop(L) > 0) {
-      message = lua_tostring(L, -1);
-      lua_pop(L, 1);
-    }
-
-    if (!message) {
-      message = "Unknown Lua error";
-    }
-
-    luaL_traceback(L, L, nullptr, 1);
-    const char* stack = lua_tostring(L, -1);
-    lua_pop(L, 1);
-
-    return LuaError::New(env, message, stack ? stack : "");
   }
 
   std::vector<std::string> splitLuaPath(const std::string& path) {
