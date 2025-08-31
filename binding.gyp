@@ -8,7 +8,6 @@
       "target_name": "lua-state",
       "sources": [
         "src/init.cpp",
-        "src/lua-bridge.cpp",
         "src/lua-error.cpp",
         "src/lua-state-context.cpp",
         "src/lua-state.cpp",

@@ -1,7 +1,6 @@
 #include <napi.h>
 #include <variant>
 
-#include "lua-bridge.h"
 #include "lua-state.h"
 
 /**
@@ -71,7 +70,7 @@ Napi::Value LuaState::evalLuaFile(const Napi::CallbackInfo& info) {
   }
 
   auto file_path = info[0].ToString().Utf8Value();
-  auto eval_result = LuaBridge::evalFile(this->ctx_, env, file_path);
+  auto eval_result = this->ctx_.evalFile(env, file_path);
 
   if (std::holds_alternative<Napi::Error>(eval_result)) {
     std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
@@ -93,7 +92,7 @@ Napi::Value LuaState::evalLuaString(const Napi::CallbackInfo& info) {
   }
 
   auto lua_code = info[0].As<Napi::String>().Utf8Value();
-  auto eval_result = LuaBridge::evalString(this->ctx_, env, lua_code);
+  auto eval_result = this->ctx_.evalString(env, lua_code);
 
   if (std::holds_alternative<Napi::Error>(eval_result)) {
     std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
@@ -116,7 +115,7 @@ Napi::Value LuaState::getLuaGlobalValue(const Napi::CallbackInfo& info) {
 
   std::string lua_value_path = info[0].As<Napi::String>();
 
-  return LuaBridge::getLuaValueByPath(this->ctx_, env, lua_value_path);
+  return this->ctx_.getLuaValueByPath(env, lua_value_path);
 }
 
 /**
@@ -132,7 +131,7 @@ Napi::Value LuaState::getLuaValueLength(const Napi::CallbackInfo& info) {
 
   std::string lua_value_path = info[0].As<Napi::String>();
 
-  return LuaBridge::getLuaValueLengthByPath(this->ctx_, env, lua_value_path);
+  return this->ctx_.getLuaValueLengthByPath(env, lua_value_path);
 }
 
 /**
@@ -149,7 +148,7 @@ Napi::Value LuaState::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   std::string name = info[0].As<Napi::String>();
   auto value = info[1].As<Napi::Value>();
 
-  LuaBridge::setLuaValue(this->ctx_, name, value);
+  this->ctx_.setLuaValue(name, value);
 
   return info.This();
 }
