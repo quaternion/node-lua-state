@@ -17,8 +17,8 @@ namespace {
 
   std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
 
-  Napi::Value popJsValueFromStack(lua_State*, const Napi::Env&, int);
-  Napi::Value popJsObjectFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index);
+  Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int);
+  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index);
 
   void pushJsValueToStack(lua_State*, const Napi::Value&);
 
@@ -64,7 +64,7 @@ namespace LuaBridge {
       return env.Undefined();
     }
 
-    Napi::Value js_value = popJsValueFromStack(L, env, -1);
+    Napi::Value js_value = readJsValueFromStack(L, env, -1);
 
     lua_pop(L, 1);
 
@@ -105,7 +105,7 @@ namespace LuaBridge {
 
 namespace {
 
-  Napi::Value popJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
+  Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
     if (lua_stack_index < 0) {
       lua_stack_index = lua_gettop(L) + lua_stack_index + 1;
     }
@@ -118,7 +118,7 @@ namespace {
     case LUA_TBOOLEAN:
       return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
     case LUA_TTABLE:
-      return popJsObjectFromStack(L, env, lua_stack_index);
+      return readJsObjectFromStack(L, env, lua_stack_index);
     case LUA_TFUNCTION: {
       lua_pushvalue(L, lua_stack_index);
       int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -299,20 +299,20 @@ namespace {
     }
 
     if (nres == 1) {
-      Napi::Value result = popJsValueFromStack(L, env, -1);
+      Napi::Value result = readJsValueFromStack(L, env, -1);
       lua_settop(L, pivot_index);
       return result;
     }
 
     Napi::Array arr = Napi::Array::New(env, nres);
     for (int i = 0; i < nres; ++i) {
-      arr[i] = popJsValueFromStack(L, env, -nres + i);
+      arr[i] = readJsValueFromStack(L, env, -nres + i);
     }
     lua_settop(L, pivot_index);
     return arr;
   }
 
-  Napi::Value popJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
+  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
     Napi::Object result = Napi::Object::New(env);
 
     lua_pushnil(L);
@@ -330,7 +330,7 @@ namespace {
         continue;
       }
 
-      Napi::Value value = popJsValueFromStack(L, env, -1);
+      Napi::Value value = readJsValueFromStack(L, env, -1);
       result.Set(key, value);
       lua_pop(L, 1);
     }
@@ -352,7 +352,7 @@ namespace {
     int lua_nargs = lua_gettop(L);
     std::vector<napi_value> js_args;
     for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = popJsValueFromStack(L, env, i);
+      auto js_arg = readJsValueFromStack(L, env, i);
       js_args.push_back(js_arg);
     }
 
