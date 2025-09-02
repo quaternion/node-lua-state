@@ -1,5 +1,5 @@
 const { LuaState } = require("../index");
-const { beforeEach, describe, it, mock } = require("node:test");
+const { beforeEach, describe, it } = require("node:test");
 const {
   deepStrictEqual,
   doesNotThrow,
@@ -94,6 +94,22 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
           `variable "${path}" of type "${variableType}" expected "${expected}"`
         );
       });
+    });
+  });
+
+  describe("of circular table", () => {
+    beforeEach(() => {
+      luaState.eval(`
+        tbl = {
+          str = 'foo'          
+        }
+        tbl.self = tbl
+      `);
+    });
+
+    it("should get the table with self references", () => {
+      const tbl = luaState.getGlobal("tbl");
+      strictEqual(tbl, tbl.self);
     });
   });
 

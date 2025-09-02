@@ -18,7 +18,8 @@ namespace {
   std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
 
   Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int);
-  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index);
+  Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
+  Napi::Value readJsObjectFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
 
   void pushJsValueToStack(lua_State*, const Napi::Value&);
 
@@ -140,6 +141,11 @@ Napi::Value LuaStateContext::getLuaValueLengthByPath(const Napi::Env& env, const
 namespace {
 
   Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
+    std::unordered_map<const void*, Napi::Value> visited;
+    return readJsValueFromStack(L, env, lua_stack_index, visited);
+  }
+
+  Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index, std::unordered_map<const void*, Napi::Value>& visited) {
     if (lua_stack_index < 0) {
       lua_stack_index = lua_gettop(L) + lua_stack_index + 1;
     }
@@ -152,7 +158,7 @@ namespace {
     case LUA_TBOOLEAN:
       return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
     case LUA_TTABLE:
-      return readJsObjectFromStack(L, env, lua_stack_index);
+      return readJsObjectFromStack(L, env, lua_stack_index, visited);
     case LUA_TFUNCTION: {
       lua_pushvalue(L, lua_stack_index);
       int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -339,15 +345,23 @@ namespace {
     }
 
     Napi::Array arr = Napi::Array::New(env, nres);
+    std::unordered_map<const void*, Napi::Value> visited;
     for (int i = 0; i < nres; ++i) {
-      arr[i] = readJsValueFromStack(L, env, -nres + i);
+      arr[i] = readJsValueFromStack(L, env, -nres + i, visited);
     }
     lua_settop(L, pivot_index);
     return arr;
   }
 
-  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index) {
+  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index, std::unordered_map<const void*, Napi::Value>& visited) {
+    const void* lua_pointer = lua_topointer(L, lua_stack_index);
+
+    if (visited.count(lua_pointer)) {
+      return visited[lua_pointer];
+    };
+
     Napi::Object result = Napi::Object::New(env);
+    visited[lua_pointer] = result;
 
     lua_pushnil(L);
 
@@ -364,7 +378,7 @@ namespace {
         continue;
       }
 
-      Napi::Value value = readJsValueFromStack(L, env, -1);
+      Napi::Value value = readJsValueFromStack(L, env, -1, visited);
       result.Set(key, value);
       lua_pop(L, 1);
     }
@@ -385,8 +399,9 @@ namespace {
     // cast lua arguments to javascript
     int lua_nargs = lua_gettop(L);
     std::vector<napi_value> js_args;
+    std::unordered_map<const void*, Napi::Value> visited;
     for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = readJsValueFromStack(L, env, i);
+      auto js_arg = readJsValueFromStack(L, env, i, visited);
       js_args.push_back(js_arg);
     }
 
