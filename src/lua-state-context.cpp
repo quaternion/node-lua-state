@@ -22,6 +22,7 @@ namespace {
   Napi::Value readJsObjectFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
 
   void pushJsValueToStack(lua_State*, const Napi::Value&);
+  void pushJsPrimitiveToStack(lua_State*, const Napi::Value&);
 
   enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
   PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State*, const std::string&);
@@ -208,11 +209,91 @@ namespace {
     }
   }
 
+  struct JsObjectLuaRef {
+    Napi::Object obj;
+    int lua_ref;
+  };
+
+  void pushJsValueToStack(lua_State* L, const Napi::Value& value) {
+    auto env = value.Env();
+    Napi::HandleScope scope(env);
+
+    auto value_type = value.Type();
+
+    if (value_type != napi_object) {
+      pushJsPrimitiveToStack(L, value);
+      return;
+    }
+
+    std::vector<JsObjectLuaRef> visited;
+
+    auto create_table_for = [&](const Napi::Object& obj) -> int {
+      lua_newtable(L);
+      int lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+      visited.push_back({obj, lua_ref});
+      return lua_ref;
+    };
+
+    auto find_visited = [&](const Napi::Object& obj) -> int {
+      for (auto&& visited_enty : visited) {
+        if (visited_enty.obj.StrictEquals(obj)) {
+          return visited_enty.lua_ref;
+        }
+      }
+      return -1;
+    };
+
+    Napi::Object root = value.As<Napi::Object>();
+    int root_lua_ref = create_table_for(root);
+
+    std::vector<JsObjectLuaRef> frames;
+
+    frames.push_back({root, root_lua_ref});
+
+    while (!frames.empty()) {
+      JsObjectLuaRef& frame = frames.back();
+      frames.pop_back();
+
+      lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
+
+      Napi::Array prop_names = frame.obj.GetPropertyNames();
+
+      for (uint32_t i = 0; i < prop_names.Length(); i++) {
+        Napi::Value prop_name = prop_names.Get(i);
+        std::string prop_key = prop_name.ToString().Utf8Value();
+        Napi::Value prop_value = frame.obj.Get(prop_name);
+        auto prop_value_type = prop_value.Type();
+
+        if (prop_value_type != napi_object) {
+          pushJsPrimitiveToStack(L, prop_value);
+        } else {
+          auto child_obj = prop_value.As<Napi::Object>();
+          int lua_ref = find_visited(child_obj);
+          if (lua_ref < 0) {
+            lua_ref = create_table_for(child_obj);
+            frames.push_back({child_obj, lua_ref});
+          }
+          lua_rawgeti(L, LUA_REGISTRYINDEX, lua_ref);
+        }
+
+        lua_setfield(L, -2, prop_key.c_str());
+      }
+
+      lua_pop(L, 1);
+    }
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, root_lua_ref);
+
+    for (auto& v : visited) {
+      luaL_unref(L, LUA_REGISTRYINDEX, v.lua_ref);
+    }
+  }
+
   struct JsFunctionHolder {
     Napi::FunctionReference* ref;
   };
 
-  void pushJsValueToStack(lua_State* L, const Napi::Value& value) {
+  void pushJsPrimitiveToStack(lua_State* L, const Napi::Value& value) {
     if (value.IsUndefined() || value.IsNull()) {
       lua_pushnil(L);
     } else if (value.IsString()) {
@@ -234,17 +315,6 @@ namespace {
       }
 
       lua_setmetatable(L, -2);
-    } else if (value.IsObject()) {
-      lua_newtable(L);
-
-      Napi::Object obj = value.As<Napi::Object>();
-      Napi::Array keys = obj.GetPropertyNames();
-
-      for (uint32_t i = 0; i < keys.Length(); i++) {
-        std::string key = keys.Get(i).As<Napi::String>().Utf8Value();
-        pushJsValueToStack(L, obj.Get(key));
-        lua_setfield(L, -2, key.c_str());
-      }
     } else {
       lua_pushnil(L);
     }
