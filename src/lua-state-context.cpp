@@ -22,7 +22,7 @@ namespace {
   Napi::Value readJsObjectFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
 
   void pushJsValueToStack(lua_State*, const Napi::Value&);
-  void pushJsPrimitiveToStack(lua_State*, const Napi::Value&);
+  void pushJsPrimitiveToStack(lua_State*, const napi_valuetype, const Napi::Value&);
 
   enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
   PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State*, const std::string&);
@@ -152,60 +152,60 @@ namespace {
     }
 
     switch (lua_type(L, lua_stack_index)) {
-    case LUA_TNUMBER:
-      return Napi::Number::New(env, lua_tonumber(L, lua_stack_index));
-    case LUA_TSTRING:
-      return Napi::String::New(env, lua_tostring(L, lua_stack_index));
-    case LUA_TBOOLEAN:
-      return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
-    case LUA_TTABLE:
-      return readJsObjectFromStack(L, env, lua_stack_index, visited);
-    case LUA_TFUNCTION: {
-      lua_pushvalue(L, lua_stack_index);
-      int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+      case LUA_TNUMBER:
+        return Napi::Number::New(env, lua_tonumber(L, lua_stack_index));
+      case LUA_TSTRING:
+        return Napi::String::New(env, lua_tostring(L, lua_stack_index));
+      case LUA_TBOOLEAN:
+        return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
+      case LUA_TTABLE:
+        return readJsObjectFromStack(L, env, lua_stack_index, visited);
+      case LUA_TFUNCTION: {
+        lua_pushvalue(L, lua_stack_index);
+        int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-      auto js_function = Napi::Function::New(
-        env,
-        [L, lua_function_ref](const Napi::CallbackInfo& info) -> Napi::Value {
-          lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function_ref);
+        auto js_function = Napi::Function::New(
+          env,
+          [L, lua_function_ref](const Napi::CallbackInfo& info) -> Napi::Value {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function_ref);
 
-          auto env = info.Env();
-          auto nargs = info.Length();
+            auto env = info.Env();
+            auto nargs = info.Length();
 
-          for (size_t i = 0; i < nargs; i++) {
-            pushJsValueToStack(L, info[i]);
-          }
+            for (size_t i = 0; i < nargs; i++) {
+              pushJsValueToStack(L, info[i]);
+            }
 
-          auto result = callLuaFunctionOnStack(L, env, nargs);
+            auto result = callLuaFunctionOnStack(L, env, nargs);
 
-          if (std::holds_alternative<Napi::Error>(result)) {
-            std::get<Napi::Error>(result).ThrowAsJavaScriptException();
-            return env.Undefined();
-          }
+            if (std::holds_alternative<Napi::Error>(result)) {
+              std::get<Napi::Error>(result).ThrowAsJavaScriptException();
+              return env.Undefined();
+            }
 
-          return std::get<Napi::Value>(result);
-        },
-        "luaProxyFunction",
-        &L
-      );
+            return std::get<Napi::Value>(result);
+          },
+          "luaProxyFunction",
+          &L
+        );
 
-      js_function.AddFinalizer(
-        [L, lua_function_ref](Napi::Env, void*) {
-          auto lua_state_context = LuaStateContext::from(L);
+        js_function.AddFinalizer(
+          [L, lua_function_ref](Napi::Env, void*) {
+            auto lua_state_context = LuaStateContext::from(L);
 
-          if (lua_state_context) {
-            luaL_unref(L, LUA_REGISTRYINDEX, lua_function_ref);
-          }
-        },
-        static_cast<void*>(nullptr)
-      );
+            if (lua_state_context) {
+              luaL_unref(L, LUA_REGISTRYINDEX, lua_function_ref);
+            }
+          },
+          static_cast<void*>(nullptr)
+        );
 
-      return js_function;
-    }
-    case LUA_TNIL:
-      return env.Null();
-    default:
-      return env.Undefined();
+        return js_function;
+      }
+      case LUA_TNIL:
+        return env.Null();
+      default:
+        return env.Undefined();
     }
   }
 
@@ -221,7 +221,7 @@ namespace {
     auto value_type = value.Type();
 
     if (value_type != napi_object) {
-      pushJsPrimitiveToStack(L, value);
+      pushJsPrimitiveToStack(L, value_type, value);
       return;
     }
 
@@ -265,7 +265,7 @@ namespace {
         auto prop_value_type = prop_value.Type();
 
         if (prop_value_type != napi_object) {
-          pushJsPrimitiveToStack(L, prop_value);
+          pushJsPrimitiveToStack(L, prop_value_type, prop_value);
         } else {
           auto child_obj = prop_value.As<Napi::Object>();
           int lua_ref = find_visited(child_obj);
@@ -293,30 +293,35 @@ namespace {
     Napi::FunctionReference* ref;
   };
 
-  void pushJsPrimitiveToStack(lua_State* L, const Napi::Value& value) {
-    if (value.IsUndefined() || value.IsNull()) {
-      lua_pushnil(L);
-    } else if (value.IsString()) {
-      lua_pushstring(L, value.As<Napi::String>().Utf8Value().c_str());
-    } else if (value.IsNumber()) {
-      lua_pushnumber(L, value.As<Napi::Number>());
-    } else if (value.IsBoolean()) {
-      lua_pushboolean(L, value.As<Napi::Boolean>());
-    } else if (value.IsFunction()) {
-      auto* function_holer = static_cast<JsFunctionHolder*>(lua_newuserdata(L, sizeof(JsFunctionHolder)));
-      function_holer->ref = new Napi::FunctionReference(Napi::Persistent(value.As<Napi::Function>()));
+  void pushJsPrimitiveToStack(lua_State* L, const napi_valuetype value_type, const Napi::Value& value) {
+    switch (value_type) {
+      case napi_string:
+        lua_pushstring(L, value.As<Napi::String>().Utf8Value().c_str());
+        break;
+      case napi_number:
+        lua_pushnumber(L, value.As<Napi::Number>());
+        break;
+      case napi_boolean:
+        lua_pushboolean(L, value.As<Napi::Boolean>());
+        break;
+      case napi_function: {
+        auto* function_holer = static_cast<JsFunctionHolder*>(lua_newuserdata(L, sizeof(JsFunctionHolder)));
+        function_holer->ref = new Napi::FunctionReference(Napi::Persistent(value.As<Napi::Function>()));
 
-      if (luaL_newmetatable(L, "__js_function_meta")) {
-        lua_pushcfunction(L, callJsFunctionFromLuaCallback);
-        lua_setfield(L, -2, "__call");
+        if (luaL_newmetatable(L, "__js_function_meta")) {
+          lua_pushcfunction(L, callJsFunctionFromLuaCallback);
+          lua_setfield(L, -2, "__call");
 
-        lua_pushcfunction(L, gcJsFunctionFromLuaCallback);
-        lua_setfield(L, -2, "__gc");
+          lua_pushcfunction(L, gcJsFunctionFromLuaCallback);
+          lua_setfield(L, -2, "__gc");
+        }
+
+        lua_setmetatable(L, -2);
+        break;
       }
-
-      lua_setmetatable(L, -2);
-    } else {
-      lua_pushnil(L);
+      default:
+        lua_pushnil(L);
+        break;
     }
   }
 

@@ -12,6 +12,7 @@ AlignAfterOpenBracket: BlockIndent
 BreakBeforeClosingParen: true
 
 NamespaceIndentation: All
+IndentCaseLabels: true
 
 DerivePointerAlignment: false
 PointerAlignment: Left
