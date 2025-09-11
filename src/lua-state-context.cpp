@@ -155,21 +155,21 @@ namespace {
 
     std::unordered_map<const void*, Napi::Object> visited;
     const void* root_ptr = lua_topointer(L, lua_stack_index);
-    visited[root_ptr] = root;
+    visited.insert({root_ptr, root});
 
-    struct Frame {
-      Napi::Object target;
+    struct JsObjectLuaRef {
+      Napi::Object obj;
       int lua_ref;
     };
-    std::vector<Frame> frames;
+    std::vector<JsObjectLuaRef> queue;
 
     lua_pushvalue(L, lua_stack_index);
     int root_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    frames.push_back({root, root_lua_ref});
+    queue.push_back({root, root_lua_ref});
 
-    while (!frames.empty()) {
-      auto frame = frames.back();
-      frames.pop_back();
+    while (!queue.empty()) {
+      auto frame = queue.back();
+      queue.pop_back();
 
       lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
       int table_index = lua_gettop(L);
@@ -201,17 +201,17 @@ namespace {
             value = it_visited->second;
           } else {
             auto child_obj = Napi::Object::New(env);
-            visited[child_table_ptr] = child_obj;
+            visited.insert({child_table_ptr, child_obj});
 
             lua_pushvalue(L, -1);
             int child_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-            frames.push_back({child_obj, child_lua_ref});
+            queue.push_back({child_obj, child_lua_ref});
 
             value = child_obj;
           }
         }
 
-        frame.target.Set(key, value);
+        frame.obj.Set(key, value);
 
         lua_pop(L, 1);
       }
@@ -280,11 +280,6 @@ namespace {
     }
   }
 
-  struct JsObjectLuaRef {
-    Napi::Object obj;
-    int lua_ref;
-  };
-
   void pushJsValueToStack(lua_State* L, const Napi::Value& value) {
     auto value_type = value.Type();
 
@@ -292,6 +287,11 @@ namespace {
       pushJsPrimitiveToStack(L, value_type, value);
       return;
     }
+
+    struct JsObjectLuaRef {
+      Napi::Object obj;
+      int lua_ref;
+    };
 
     std::vector<JsObjectLuaRef> visited;
 
@@ -314,12 +314,12 @@ namespace {
     Napi::Object root = value.As<Napi::Object>();
     int root_lua_ref = create_table_for(root);
 
-    std::vector<JsObjectLuaRef> frames;
-    frames.push_back({root, root_lua_ref});
+    std::vector<JsObjectLuaRef> queue;
+    queue.push_back({root, root_lua_ref});
 
-    while (!frames.empty()) {
-      JsObjectLuaRef frame = frames.back();
-      frames.pop_back();
+    while (!queue.empty()) {
+      JsObjectLuaRef frame = queue.back();
+      queue.pop_back();
 
       lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
 
@@ -338,7 +338,7 @@ namespace {
           int lua_ref = find_visited(child_obj);
           if (lua_ref < 0) {
             lua_ref = create_table_for(child_obj);
-            frames.push_back({child_obj, lua_ref});
+            queue.push_back({child_obj, lua_ref});
           }
           lua_rawgeti(L, LUA_REGISTRYINDEX, lua_ref);
         }
@@ -578,7 +578,7 @@ namespace {
 
 #ifdef DEBUG
 #include <iostream>
-void dumpLuaStack(lua_State* L) {
+static void dump_lua_stack(lua_State* L) {
   int top = lua_gettop(L);
   std::cout << "Lua stack (size = " << top << "):\n";
 
