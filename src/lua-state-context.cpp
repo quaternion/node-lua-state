@@ -18,8 +18,7 @@ namespace {
   std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
 
   Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int);
-  Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
-  Napi::Value readJsObjectFromStack(lua_State*, const Napi::Env&, int, std::unordered_map<const void*, Napi::Value>&);
+  Napi::Value readJsPrimitiveFromStack(lua_State*, const Napi::Env&, int, int);
 
   void pushJsValueToStack(lua_State*, const Napi::Value&);
   void pushJsPrimitiveToStack(lua_State*, const napi_valuetype, const Napi::Value&);
@@ -142,24 +141,96 @@ Napi::Value LuaStateContext::getLuaValueLengthByPath(const Napi::Env& env, const
 namespace {
 
   Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
-    std::unordered_map<const void*, Napi::Value> visited;
-    return readJsValueFromStack(L, env, lua_stack_index, visited);
-  }
-
-  Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index, std::unordered_map<const void*, Napi::Value>& visited) {
     if (lua_stack_index < 0) {
       lua_stack_index = lua_gettop(L) + lua_stack_index + 1;
     }
 
-    switch (lua_type(L, lua_stack_index)) {
+    int root_type = lua_type(L, lua_stack_index);
+
+    if (root_type != LUA_TTABLE) {
+      return readJsPrimitiveFromStack(L, env, root_type, lua_stack_index);
+    }
+
+    Napi::Object root = Napi::Object::New(env);
+
+    std::unordered_map<const void*, Napi::Object> visited;
+    const void* root_ptr = lua_topointer(L, lua_stack_index);
+    visited[root_ptr] = root;
+
+    struct Frame {
+      Napi::Object target;
+      int lua_ref;
+    };
+    std::vector<Frame> frames;
+
+    lua_pushvalue(L, lua_stack_index);
+    int root_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    frames.push_back({root, root_lua_ref});
+
+    while (!frames.empty()) {
+      auto frame = frames.back();
+      frames.pop_back();
+
+      lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
+      int table_index = lua_gettop(L);
+
+      lua_pushnil(L);
+
+      while (lua_next(L, table_index)) {
+        auto key_type = lua_type(L, -2);
+        Napi::Value key;
+
+        if (key_type == LUA_TSTRING) {
+          key = Napi::String::New(env, lua_tostring(L, -2));
+        } else if (key_type == LUA_TNUMBER) {
+          key = Napi::Number::New(env, lua_tonumber(L, -2));
+        } else {
+          lua_pop(L, 1);
+          continue;
+        }
+
+        auto value_type = lua_type(L, -1);
+        Napi::Value value;
+
+        if (value_type != LUA_TTABLE) {
+          value = readJsPrimitiveFromStack(L, env, value_type, -1);
+        } else {
+          const void* child_table_ptr = lua_topointer(L, -1);
+          auto it_visited = visited.find(child_table_ptr);
+          if (it_visited != visited.end()) {
+            value = it_visited->second;
+          } else {
+            auto child_obj = Napi::Object::New(env);
+            visited[child_table_ptr] = child_obj;
+
+            lua_pushvalue(L, -1);
+            int child_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+            frames.push_back({child_obj, child_lua_ref});
+
+            value = child_obj;
+          }
+        }
+
+        frame.target.Set(key, value);
+
+        lua_pop(L, 1);
+      }
+
+      lua_pop(L, 1);
+      luaL_unref(L, LUA_REGISTRYINDEX, frame.lua_ref);
+    }
+
+    return root;
+  }
+
+  Napi::Value readJsPrimitiveFromStack(lua_State* L, const Napi::Env& env, int lua_type, int lua_stack_index) {
+    switch (lua_type) {
       case LUA_TNUMBER:
         return Napi::Number::New(env, lua_tonumber(L, lua_stack_index));
       case LUA_TSTRING:
         return Napi::String::New(env, lua_tostring(L, lua_stack_index));
       case LUA_TBOOLEAN:
         return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
-      case LUA_TTABLE:
-        return readJsObjectFromStack(L, env, lua_stack_index, visited);
       case LUA_TFUNCTION: {
         lua_pushvalue(L, lua_stack_index);
         int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -215,9 +286,6 @@ namespace {
   };
 
   void pushJsValueToStack(lua_State* L, const Napi::Value& value) {
-    auto env = value.Env();
-    Napi::HandleScope scope(env);
-
     auto value_type = value.Type();
 
     if (value_type != napi_object) {
@@ -247,11 +315,10 @@ namespace {
     int root_lua_ref = create_table_for(root);
 
     std::vector<JsObjectLuaRef> frames;
-
     frames.push_back({root, root_lua_ref});
 
     while (!frames.empty()) {
-      JsObjectLuaRef& frame = frames.back();
+      JsObjectLuaRef frame = frames.back();
       frames.pop_back();
 
       lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
@@ -420,45 +487,11 @@ namespace {
     }
 
     Napi::Array arr = Napi::Array::New(env, nres);
-    std::unordered_map<const void*, Napi::Value> visited;
     for (int i = 0; i < nres; ++i) {
-      arr[i] = readJsValueFromStack(L, env, -nres + i, visited);
+      arr.Set(i, readJsValueFromStack(L, env, -nres + i));
     }
     lua_settop(L, pivot_index);
     return arr;
-  }
-
-  Napi::Value readJsObjectFromStack(lua_State* L, const Napi::Env& env, const int lua_stack_index, std::unordered_map<const void*, Napi::Value>& visited) {
-    const void* lua_pointer = lua_topointer(L, lua_stack_index);
-
-    if (visited.count(lua_pointer)) {
-      return visited[lua_pointer];
-    };
-
-    Napi::Object result = Napi::Object::New(env);
-    visited[lua_pointer] = result;
-
-    lua_pushnil(L);
-
-    while (lua_next(L, lua_stack_index)) {
-      auto key_type = lua_type(L, -2);
-      Napi::Value key;
-
-      if (key_type == LUA_TSTRING) {
-        key = Napi::String::New(env, lua_tostring(L, -2));
-      } else if (key_type == LUA_TNUMBER) {
-        key = Napi::Number::New(env, lua_tonumber(L, -2));
-      } else {
-        lua_pop(L, 1);
-        continue;
-      }
-
-      Napi::Value value = readJsValueFromStack(L, env, -1, visited);
-      result.Set(key, value);
-      lua_pop(L, 1);
-    }
-
-    return result;
   }
 
   int callJsFunctionFromLuaCallback(lua_State* L) {
@@ -473,10 +506,10 @@ namespace {
 
     // cast lua arguments to javascript
     int lua_nargs = lua_gettop(L);
+
     std::vector<napi_value> js_args;
-    std::unordered_map<const void*, Napi::Value> visited;
     for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = readJsValueFromStack(L, env, i, visited);
+      auto js_arg = readJsValueFromStack(L, env, i);
       js_args.push_back(js_arg);
     }
 
@@ -542,3 +575,53 @@ namespace {
   }
 
 } // namespace
+
+#ifdef DEBUG
+#include <iostream>
+void dumpLuaStack(lua_State* L) {
+  int top = lua_gettop(L);
+  std::cout << "Lua stack (size = " << top << "):\n";
+
+  for (int i = 1; i <= top; i++) {
+    int t = lua_type(L, i);
+
+    std::cout << "  [" << i << "] " << lua_typename(L, t) << " - ";
+
+    switch (t) {
+      case LUA_TSTRING:
+        std::cout << "\"" << lua_tostring(L, i) << "\"";
+        break;
+      case LUA_TBOOLEAN:
+        std::cout << (lua_toboolean(L, i) ? "true" : "false");
+        break;
+      case LUA_TNUMBER:
+        std::cout << lua_tonumber(L, i);
+        break;
+      case LUA_TFUNCTION:
+        std::cout << "function@" << lua_topointer(L, i);
+        break;
+      case LUA_TTABLE:
+        std::cout << "table@" << lua_topointer(L, i);
+        break;
+      case LUA_TUSERDATA:
+        std::cout << "userdata@" << lua_topointer(L, i);
+        break;
+      case LUA_TLIGHTUSERDATA:
+        std::cout << "lightuserdata@" << lua_topointer(L, i);
+        break;
+      case LUA_TTHREAD:
+        std::cout << "thread@" << lua_topointer(L, i);
+        break;
+      case LUA_TNIL:
+        std::cout << "nil";
+        break;
+      default:
+        std::cout << "?";
+        break;
+    }
+
+    std::cout << "\n";
+  }
+  std::cout << "---- end of stack ----\n";
+}
+#endif

@@ -31,8 +31,9 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
   });
 
   describe("of table", () => {
-    beforeEach(() => {
-      luaState.eval(`
+    describe("simple", () => {
+      beforeEach(() => {
+        luaState.eval(`
         tbl = {
           str = 'foo',
           num = 1,
@@ -44,72 +45,97 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
           }
         }
       `);
-    });
+      });
 
-    it("should get the whole table", () => {
-      deepStrictEqual(luaState.getGlobal("tbl"), {
-        str: "foo",
-        num: 1,
-        bool: true,
-        inner: { str: "bar", num: 2, bool: false },
+      it("should get the whole table", () => {
+        deepStrictEqual(luaState.getGlobal("tbl"), {
+          str: "foo",
+          num: 1,
+          bool: true,
+          inner: { str: "bar", num: 2, bool: false },
+        });
+      });
+
+      it("should get top-level fields", () => {
+        const topFields = [
+          ["tbl.str", "foo", "string"],
+          ["tbl.num", 1, "number"],
+          ["tbl.bool", true, "boolean"],
+          ["tbl.missing", undefined, "missing"],
+        ];
+
+        topFields.forEach(([path, expected, variableType]) => {
+          strictEqual(
+            luaState.getGlobal(path),
+            expected,
+            `variable "${path}" of type "${variableType}" expected "${expected}"`
+          );
+        });
+      });
+
+      it("should get inner whole table", () => {
+        deepStrictEqual(luaState.getGlobal("tbl.inner"), {
+          str: "bar",
+          num: 2,
+          bool: false,
+        });
+      });
+
+      it("should get inner table fields", () => {
+        const innerFields = [
+          ["tbl.inner.str", "bar", "string"],
+          ["tbl.inner.num", 2, "number"],
+          ["tbl.inner.bool", false, "boolean"],
+          ["tbl.inner.missing", undefined, "missing"],
+        ];
+        innerFields.forEach(([path, expected, variableType]) => {
+          strictEqual(
+            luaState.getGlobal(path),
+            expected,
+            `variable "${path}" of type "${variableType}" expected "${expected}"`
+          );
+        });
       });
     });
 
-    it("should get top-level fields", () => {
-      const topFields = [
-        ["tbl.str", "foo", "string"],
-        ["tbl.num", 1, "number"],
-        ["tbl.bool", true, "boolean"],
-        ["tbl.missing", undefined, "missing"],
-      ];
+    describe("circular", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          tbl = {
+            str = 'foo'          
+          }
+          tbl.self = tbl
+        `);
+      });
 
-      topFields.forEach(([path, expected, variableType]) => {
-        strictEqual(
-          luaState.getGlobal(path),
-          expected,
-          `variable "${path}" of type "${variableType}" expected "${expected}"`
-        );
+      it("should get the table with self references", () => {
+        const tbl = luaState.getGlobal("tbl");
+        strictEqual(tbl, tbl.self);
       });
     });
 
-    it("should get inner whole table", () => {
-      deepStrictEqual(luaState.getGlobal("tbl.inner"), {
-        str: "bar",
-        num: 2,
-        bool: false,
+    describe("deep cyclic table", () => {
+      beforeEach(() => {
+        luaState.eval(`
+          function buildDeepTable(size)
+            local root = {};
+            local current = root;
+            for i = 0, size do
+              local child = { value = i, root = root};
+              current.next = child;
+              current = child;
+            end
+            return root;
+          end
+
+          tbl = buildDeepTable(2000)
+        `);
       });
-    });
 
-    it("should get inner table fields", () => {
-      const innerFields = [
-        ["tbl.inner.str", "bar", "string"],
-        ["tbl.inner.num", 2, "number"],
-        ["tbl.inner.bool", false, "boolean"],
-        ["tbl.inner.missing", undefined, "missing"],
-      ];
-      innerFields.forEach(([path, expected, variableType]) => {
-        strictEqual(
-          luaState.getGlobal(path),
-          expected,
-          `variable "${path}" of type "${variableType}" expected "${expected}"`
-        );
+      it("should get the deep table", () => {
+        const tbl = luaState.getGlobal("tbl");
+        strictEqual(tbl, tbl.next.root);
       });
-    });
-  });
-
-  describe("of circular table", () => {
-    beforeEach(() => {
-      luaState.eval(`
-        tbl = {
-          str = 'foo'          
-        }
-        tbl.self = tbl
-      `);
-    });
-
-    it("should get the table with self references", () => {
-      const tbl = luaState.getGlobal("tbl");
-      strictEqual(tbl, tbl.self);
     });
   });
 
