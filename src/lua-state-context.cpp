@@ -288,8 +288,7 @@ namespace {
 
             return std::get<Napi::Value>(result);
           },
-          "luaProxyFunction",
-          &L
+          "luaProxyFunction"
         );
 
         js_function.AddFinalizer(
