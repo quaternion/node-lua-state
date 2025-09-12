@@ -13,9 +13,9 @@ extern "C" {
 }
 
 namespace {
-  std::unordered_map<std::string, lua_CFunction> buildLuaLibFunctionsMap();
 
-  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
+  enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
+  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State*, const std::string&);
 
   Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int);
   Napi::Value readJsPrimitiveFromStack(lua_State*, const Napi::Env&, int, int);
@@ -23,15 +23,15 @@ namespace {
   void pushJsValueToStack(lua_State*, const Napi::Value&);
   void pushJsPrimitiveToStack(lua_State*, const napi_valuetype, const Napi::Value&);
 
-  enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
-  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State*, const std::string&);
-
-  int callJsFunctionFromLuaCallback(lua_State* L);
-  int gcJsFunctionFromLuaCallback(lua_State* L);
-
+  std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State*, const Napi::Env&, const int);
   Napi::Error popErrorFromStack(lua_State*, const Napi::Env&);
 
-  std::vector<std::string> splitLuaPath(const std::string& path);
+  std::vector<std::string> splitLuaPath(const std::string&);
+  std::unordered_map<std::string, lua_CFunction> buildLuaLibFunctionsMap();
+
+  int callJsFunctionLuaCallback(lua_State*);
+  int gcJsFunctionLuaCallback(lua_State*);
+  int tracebackLuaCallback(lua_State*);
 
 } // namespace
 
@@ -139,6 +139,37 @@ Napi::Value LuaStateContext::getLuaValueLengthByPath(const Napi::Env& env, const
 }
 
 namespace {
+
+  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State* L, const std::string& lua_value_path) {
+    std::vector<std::string> parts = splitLuaPath(lua_value_path);
+
+    if (parts.empty()) {
+      return PushLuaValueByPathToStackStatus::NotFound;
+    }
+
+    lua_getglobal(L, parts[0].c_str());
+    if (lua_isnil(L, -1)) {
+      lua_pop(L, 1);
+      return PushLuaValueByPathToStackStatus::NotFound;
+    }
+
+    for (size_t i = 1; i < parts.size(); i++) {
+      if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return PushLuaValueByPathToStackStatus::BrokenPath;
+      }
+
+      lua_getfield(L, -1, parts[i].c_str());
+      lua_remove(L, -2);
+
+      if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return PushLuaValueByPathToStackStatus::BrokenPath;
+      }
+    }
+
+    return PushLuaValueByPathToStackStatus::Found;
+  }
 
   Napi::Value readJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
     if (lua_stack_index < 0) {
@@ -372,14 +403,14 @@ namespace {
         lua_pushboolean(L, value.As<Napi::Boolean>());
         break;
       case napi_function: {
-        auto* function_holer = static_cast<JsFunctionHolder*>(lua_newuserdata(L, sizeof(JsFunctionHolder)));
+        JsFunctionHolder* function_holer = static_cast<JsFunctionHolder*>(lua_newuserdata(L, sizeof(JsFunctionHolder)));
         function_holer->ref = new Napi::FunctionReference(Napi::Persistent(value.As<Napi::Function>()));
 
         if (luaL_newmetatable(L, "__js_function_meta")) {
-          lua_pushcfunction(L, callJsFunctionFromLuaCallback);
+          lua_pushcfunction(L, callJsFunctionLuaCallback);
           lua_setfield(L, -2, "__call");
 
-          lua_pushcfunction(L, gcJsFunctionFromLuaCallback);
+          lua_pushcfunction(L, gcJsFunctionLuaCallback);
           lua_setfield(L, -2, "__gc");
         }
 
@@ -392,68 +423,6 @@ namespace {
     }
   }
 
-  PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State* L, const std::string& path) {
-    std::vector<std::string> parts = splitLuaPath(path);
-
-    if (parts.empty()) {
-      return PushLuaValueByPathToStackStatus::NotFound;
-    }
-
-    lua_getglobal(L, parts[0].c_str());
-    if (lua_isnil(L, -1)) {
-      lua_pop(L, 1);
-      return PushLuaValueByPathToStackStatus::NotFound;
-    }
-
-    for (size_t i = 1; i < parts.size(); i++) {
-      if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        return PushLuaValueByPathToStackStatus::BrokenPath;
-      }
-
-      lua_getfield(L, -1, parts[i].c_str());
-      lua_remove(L, -2);
-
-      if (lua_isnil(L, -1)) {
-        lua_pop(L, 1);
-        return PushLuaValueByPathToStackStatus::BrokenPath;
-      }
-    }
-
-    return PushLuaValueByPathToStackStatus::Found;
-  }
-
-  Napi::Error popErrorFromStack(lua_State* L, const Napi::Env& env) {
-    const char* raw_full = lua_tostring(L, -1);
-    lua_pop(L, 1);
-
-    std::string full = raw_full ? raw_full : "Unknown Lua error";
-
-    auto eol_pos = full.find('\n');
-
-    std::string message, trace;
-
-    if (eol_pos != std::string::npos) {
-      message = full.substr(0, eol_pos);
-      trace = full.substr(eol_pos + 1);
-    } else {
-      message = full;
-      trace = "";
-    }
-
-    return LuaError::New(env, message, trace);
-  }
-
-  int traceback(lua_State* L) {
-    const char* msg = lua_tostring(L, 1);
-    if (!msg) {
-      msg = "Unknown Lua error";
-    }
-
-    luaL_traceback(L, L, msg, 1);
-    return 1;
-  }
-
   std::variant<Napi::Value, Napi::Error> callLuaFunctionOnStack(lua_State* L, const Napi::Env& env, const int nargs) {
     // function stack index
     int fn_index = lua_gettop(L) - nargs;
@@ -461,8 +430,8 @@ namespace {
     // stack index without function and arguments
     int pivot_index = fn_index - 1;
 
-    // push traceback function
-    lua_pushcfunction(L, traceback);
+    // push tracebackLuaCallback function
+    lua_pushcfunction(L, tracebackLuaCallback);
     lua_insert(L, fn_index);
     pivot_index++;
 
@@ -494,41 +463,14 @@ namespace {
     return arr;
   }
 
-  int callJsFunctionFromLuaCallback(lua_State* L) {
-    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
-
-    if (!function_holer || !function_holer->ref) {
-      return luaL_error(L, "Invalid js function reference");
+  int tracebackLuaCallback(lua_State* L) {
+    const char* msg = lua_tostring(L, 1);
+    if (!msg) {
+      msg = "Unknown Lua error";
     }
 
-    Napi::Env env = function_holer->ref->Env();
-    Napi::HandleScope scope(env);
-
-    // cast lua arguments to javascript
-    int lua_nargs = lua_gettop(L);
-
-    std::vector<napi_value> js_args;
-    for (int i = 2; i <= lua_nargs; ++i) {
-      auto js_arg = readJsValueFromStack(L, env, i);
-      js_args.push_back(js_arg);
-    }
-
-    Napi::Value js_function_result = function_holer->ref->Call(js_args);
-
-    pushJsValueToStack(L, js_function_result);
-
+    luaL_traceback(L, L, msg, 1);
     return 1;
-  }
-
-  int gcJsFunctionFromLuaCallback(lua_State* L) {
-    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
-
-    if (function_holer && function_holer->ref) {
-      delete function_holer->ref;
-      function_holer->ref = nullptr;
-    }
-
-    return 0;
   }
 
   std::vector<std::string> splitLuaPath(const std::string& path) {
@@ -574,11 +516,69 @@ namespace {
     return map;
   }
 
+  int callJsFunctionLuaCallback(lua_State* L) {
+    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
+
+    if (!function_holer || !function_holer->ref) {
+      return luaL_error(L, "Invalid js function reference");
+    }
+
+    Napi::Env env = function_holer->ref->Env();
+    Napi::HandleScope scope(env);
+
+    // cast lua arguments to javascript
+    int lua_nargs = lua_gettop(L);
+
+    std::vector<napi_value> js_args;
+    for (int i = 2; i <= lua_nargs; ++i) {
+      auto js_arg = readJsValueFromStack(L, env, i);
+      js_args.push_back(js_arg);
+    }
+
+    Napi::Value js_function_result = function_holer->ref->Call(js_args);
+
+    pushJsValueToStack(L, js_function_result);
+
+    return 1;
+  }
+
+  int gcJsFunctionLuaCallback(lua_State* L) {
+    auto* function_holer = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
+
+    if (function_holer && function_holer->ref) {
+      delete function_holer->ref;
+      function_holer->ref = nullptr;
+    }
+
+    return 0;
+  }
+
+  Napi::Error popErrorFromStack(lua_State* L, const Napi::Env& env) {
+    const char* raw_full = lua_tostring(L, -1);
+    lua_pop(L, 1);
+
+    std::string full = raw_full ? raw_full : "Unknown Lua error";
+
+    auto eol_pos = full.find('\n');
+
+    std::string message, trace;
+
+    if (eol_pos != std::string::npos) {
+      message = full.substr(0, eol_pos);
+      trace = full.substr(eol_pos + 1);
+    } else {
+      message = full;
+      trace = "";
+    }
+
+    return LuaError::New(env, message, trace);
+  }
+
 } // namespace
 
 #ifdef DEBUG
 #include <iostream>
-static void dump_lua_stack(lua_State* L) {
+static void dumpLuaStack(lua_State* L) {
   int top = lua_gettop(L);
   std::cout << "Lua stack (size = " << top << "):\n";
 
