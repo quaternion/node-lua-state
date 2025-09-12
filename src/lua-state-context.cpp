@@ -1,6 +1,7 @@
 #include <napi.h>
-#include <sstream>
+#include <string>
 #include <variant>
+#include <vector>
 
 #include "lua-compat-defines.h"
 #include "lua-error.h"
@@ -141,7 +142,7 @@ Napi::Value LuaStateContext::getLuaValueLengthByPath(const Napi::Env& env, const
 namespace {
 
   PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State* L, const std::string& lua_value_path) {
-    std::vector<std::string> parts = splitLuaPath(lua_value_path);
+    auto parts = splitLuaPath(lua_value_path);
 
     if (parts.empty()) {
       return PushLuaValueByPathToStackStatus::NotFound;
@@ -474,13 +475,14 @@ namespace {
   }
 
   std::vector<std::string> splitLuaPath(const std::string& path) {
-    std::vector<std::string> path_parts;
-    std::stringstream sstream(path);
-    std::string item;
-    while (std::getline(sstream, item, '.')) {
-      path_parts.push_back(item);
+    std::vector<std::string> parts;
+    size_t start = 0, pos;
+    while ((pos = path.find('.', start)) != std::string::npos) {
+      parts.emplace_back(path.substr(start, pos - start));
+      start = pos + 1;
     }
-    return path_parts;
+    parts.emplace_back(path.substr(start));
+    return parts;
   }
 
   /**
