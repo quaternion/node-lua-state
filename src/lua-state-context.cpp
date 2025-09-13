@@ -1,5 +1,6 @@
 #include <napi.h>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -139,6 +140,68 @@ Napi::Value LuaStateContext::getLuaValueLengthByPath(const Napi::Env& env, const
   return result;
 }
 
+Napi::Function LuaStateContext::findOrCreateJsFunction(const Napi::Env& env, int lua_stack_index) {
+  std::lock_guard<std::mutex> lock(this->js_functions_cache_mtx_);
+
+  auto L = this->L_;
+
+  const void* lua_function_ptr = lua_topointer(L, lua_stack_index);
+
+  // find function in cache
+  {
+    auto it_js_function = this->js_functions_cache_.find(lua_function_ptr);
+    if (it_js_function != this->js_functions_cache_.end()) {
+      return it_js_function->second;
+    }
+  }
+
+  lua_pushvalue(L, lua_stack_index);
+  int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  auto js_function = Napi::Function::New(
+    env,
+    [L, lua_function_ref](const Napi::CallbackInfo& info) -> Napi::Value {
+      lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function_ref);
+
+      auto env = info.Env();
+      auto nargs = info.Length();
+
+      for (size_t i = 0; i < nargs; i++) {
+        pushJsValueToStack(L, info[i]);
+      }
+
+      auto result = callLuaFunctionOnStack(L, env, nargs);
+
+      if (std::holds_alternative<Napi::Error>(result)) {
+        std::get<Napi::Error>(result).ThrowAsJavaScriptException();
+        return env.Undefined();
+      }
+
+      return std::get<Napi::Value>(result);
+    },
+    "luaProxyFunction"
+  );
+
+  js_function.AddFinalizer(
+    [L, lua_function_ptr, lua_function_ref](Napi::Env, void*) {
+      LuaStateContext* lua_state_context = LuaStateContext::from(L);
+
+      if (!lua_state_context) {
+        return;
+      }
+
+      std::lock_guard<std::mutex> lock(lua_state_context->js_functions_cache_mtx_);
+      luaL_unref(lua_state_context->L_, LUA_REGISTRYINDEX, lua_function_ref);
+      lua_state_context->js_functions_cache_.erase(lua_function_ptr);
+    },
+    static_cast<void*>(nullptr)
+  );
+
+  this->js_functions_cache_.insert({lua_function_ptr, js_function});
+
+  return js_function;
+}
+
 namespace {
 
   PushLuaValueByPathToStackStatus pushLuaValueByPathToStack(lua_State* L, const std::string& lua_value_path) {
@@ -264,45 +327,8 @@ namespace {
       case LUA_TBOOLEAN:
         return Napi::Boolean::New(env, lua_toboolean(L, lua_stack_index));
       case LUA_TFUNCTION: {
-        lua_pushvalue(L, lua_stack_index);
-        int lua_function_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-        auto js_function = Napi::Function::New(
-          env,
-          [L, lua_function_ref](const Napi::CallbackInfo& info) -> Napi::Value {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function_ref);
-
-            auto env = info.Env();
-            auto nargs = info.Length();
-
-            for (size_t i = 0; i < nargs; i++) {
-              pushJsValueToStack(L, info[i]);
-            }
-
-            auto result = callLuaFunctionOnStack(L, env, nargs);
-
-            if (std::holds_alternative<Napi::Error>(result)) {
-              std::get<Napi::Error>(result).ThrowAsJavaScriptException();
-              return env.Undefined();
-            }
-
-            return std::get<Napi::Value>(result);
-          },
-          "luaProxyFunction"
-        );
-
-        js_function.AddFinalizer(
-          [L, lua_function_ref](Napi::Env, void*) {
-            auto lua_state_context = LuaStateContext::from(L);
-
-            if (lua_state_context) {
-              luaL_unref(L, LUA_REGISTRYINDEX, lua_function_ref);
-            }
-          },
-          static_cast<void*>(nullptr)
-        );
-
-        return js_function;
+        auto lua_state_context = LuaStateContext::from(L);
+        return lua_state_context->findOrCreateJsFunction(env, lua_stack_index);
       }
       case LUA_TNIL:
         return env.Null();
