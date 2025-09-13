@@ -197,7 +197,7 @@ Napi::Function LuaStateContext::findOrCreateJsFunction(const Napi::Env& env, int
     static_cast<void*>(nullptr)
   );
 
-  this->js_functions_cache_.insert({lua_function_ptr, js_function});
+  this->js_functions_cache_.emplace(lua_function_ptr, js_function);
 
   return js_function;
 }
@@ -250,7 +250,7 @@ namespace {
 
     std::unordered_map<const void*, Napi::Object> visited;
     const void* root_ptr = lua_topointer(L, lua_stack_index);
-    visited.insert({root_ptr, root});
+    visited.emplace(root_ptr, root);
 
     struct JsObjectLuaRef {
       Napi::Object obj;
@@ -296,7 +296,7 @@ namespace {
             value = it_visited->second;
           } else {
             auto child_obj = Napi::Object::New(env);
-            visited.insert({child_table_ptr, child_obj});
+            visited.emplace(child_table_ptr, child_obj);
 
             lua_pushvalue(L, -1);
             int child_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
