@@ -1,11 +1,13 @@
 #include <napi.h>
 
 #include "lua-error.h"
+#include "lua-state-context.h"
 #include "lua-state.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   LuaError::Init(env, exports);
   LuaState::Init(env, exports);
+  LuaStateContext::Init(env, exports);
 
   return exports;
 }

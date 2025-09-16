@@ -22,6 +22,7 @@ namespace {
   Napi::Value readJsValueFromStack(lua_State*, const Napi::Env&, int);
   Napi::Value readJsPrimitiveFromStack(lua_State*, const Napi::Env&, int, int);
 
+  Napi::Reference<Napi::Symbol> lua_reg_symbol_ref;
   void pushJsValueToStack(lua_State*, const Napi::Value&);
   void pushJsPrimitiveToStack(lua_State*, const napi_valuetype, const Napi::Value&);
 
@@ -54,6 +55,11 @@ LuaStateContext* LuaStateContext::from(lua_State* L) {
   } else {
     return nullptr;
   }
+}
+
+void LuaStateContext::Init(Napi::Env env, Napi::Object _exports) {
+  auto lua_reg_symbol = Napi::Symbol::New(env, "lua_reg");
+  lua_reg_symbol_ref = Napi::Persistent(lua_reg_symbol);
 }
 
 void LuaStateContext::openLibs(const std::optional<std::vector<std::string>>& libs) {
@@ -345,62 +351,58 @@ namespace {
       return;
     }
 
-    struct JsObjectLuaRef {
-      Napi::Object obj;
-      int lua_ref;
-    };
-
-    std::vector<JsObjectLuaRef> visited;
+    std::vector<Napi::Object> visited;
+    Napi::Symbol lua_reg_symbol = lua_reg_symbol_ref.Value();
 
     auto create_table_for = [&](const Napi::Object& obj) -> int {
       lua_newtable(L);
       int lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-      visited.push_back({obj, lua_ref});
+      obj.Set(lua_reg_symbol, Napi::Number::New(obj.Env(), lua_ref));
+      visited.push_back(obj);
       return lua_ref;
     };
 
-    auto find_visited = [&](const Napi::Object& obj) -> int {
-      for (auto&& visited_enty : visited) {
-        if (visited_enty.obj.StrictEquals(obj)) {
-          return visited_enty.lua_ref;
-        }
-      }
-      return -1;
-    };
-
     Napi::Object root = value.As<Napi::Object>();
+
     int root_lua_ref = create_table_for(root);
 
-    std::vector<JsObjectLuaRef> queue;
-    queue.push_back({root, root_lua_ref});
+    std::vector<Napi::Object> queue;
+    queue.push_back(root);
 
     while (!queue.empty()) {
-      JsObjectLuaRef frame = queue.back();
+      Napi::Object current = queue.back();
       queue.pop_back();
 
-      lua_rawgeti(L, LUA_REGISTRYINDEX, frame.lua_ref);
+      auto current_lua_ref = current.Get(lua_reg_symbol);
 
-      Napi::Array prop_names = frame.obj.GetPropertyNames();
+      lua_rawgeti(L, LUA_REGISTRYINDEX, current_lua_ref.As<Napi::Number>().Int32Value());
+
+      Napi::Array prop_names = current.GetPropertyNames();
 
       for (uint32_t i = 0; i < prop_names.Length(); i++) {
         Napi::Value prop_name = prop_names.Get(i);
-        std::string prop_key = prop_name.ToString().Utf8Value();
-        Napi::Value prop_value = frame.obj.Get(prop_name);
+        Napi::Value prop_value = current.Get(prop_name);
         auto prop_value_type = prop_value.Type();
 
         if (prop_value_type != napi_object) {
           pushJsPrimitiveToStack(L, prop_value_type, prop_value);
         } else {
           auto child_obj = prop_value.As<Napi::Object>();
-          int lua_ref = find_visited(child_obj);
-          if (lua_ref < 0) {
-            lua_ref = create_table_for(child_obj);
-            queue.push_back({child_obj, lua_ref});
+          auto child_lua_ref_prop = child_obj.Get(lua_reg_symbol);
+          int child_lua_ref;
+
+          if (!child_lua_ref_prop.IsNumber()) {
+            child_lua_ref = create_table_for(child_obj);
+            queue.push_back(child_obj);
+          } else {
+            child_lua_ref = child_lua_ref_prop.As<Napi::Number>().Uint32Value();
           }
-          lua_rawgeti(L, LUA_REGISTRYINDEX, lua_ref);
+
+          lua_rawgeti(L, LUA_REGISTRYINDEX, child_lua_ref);
         }
 
-        lua_setfield(L, -2, prop_key.c_str());
+        std::string prop_name_str = prop_name.ToString().Utf8Value();
+        lua_setfield(L, -2, prop_name_str.c_str());
       }
 
       lua_pop(L, 1);
@@ -408,8 +410,10 @@ namespace {
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, root_lua_ref);
 
-    for (auto& v : visited) {
-      luaL_unref(L, LUA_REGISTRYINDEX, v.lua_ref);
+    for (auto& obj : visited) {
+      int lua_ref = obj.Get(lua_reg_symbol).As<Napi::Number>().Int32Value();
+      luaL_unref(L, LUA_REGISTRYINDEX, lua_ref);
+      obj.Delete(lua_reg_symbol);
     }
   }
 

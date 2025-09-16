@@ -15,6 +15,7 @@ public:
   ~LuaStateContext();
 
   static LuaStateContext* from(lua_State*);
+  static void Init(Napi::Env, Napi::Object);
 
   void openLibs(const std::optional<std::vector<std::string>>&);
   void setLuaValue(const std::string&, const Napi::Value&);
