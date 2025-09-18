@@ -23,16 +23,17 @@ LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(
         auto lib_names = libs_option.As<Napi::Array>();
 
         for (size_t i = 0; i < lib_names.Length(); i++) {
-          libs_for_open.push_back(lib_names.Get(i).ToString().Utf8Value());
+          std::string lib_name = lib_names.Get(i).ToString().Utf8Value();
+          libs_for_open.push_back(lib_name);
         }
       }
     }
   }
 
   if (open_all_libs) {
-    this->ctx_.openLibs(std::nullopt);
+    ctx_.OpenLibs(std::nullopt);
   } else {
-    this->ctx_.openLibs(libs_for_open);
+    ctx_.OpenLibs(libs_for_open);
   }
 }
 
@@ -44,11 +45,11 @@ void LuaState::Init(Napi::Env env, Napi::Object exports) {
     env,
     "LuaState",
     {
-      InstanceMethod("evalFile", &LuaState::evalLuaFile),
-      InstanceMethod("eval", &LuaState::evalLuaString),
-      InstanceMethod("getGlobal", &LuaState::getLuaGlobalValue),
-      InstanceMethod("getLength", &LuaState::getLuaValueLength),
-      InstanceMethod("setGlobal", &LuaState::setLuaGlobalValue),
+      InstanceMethod("evalFile", &LuaState::EvalLuaFile),
+      InstanceMethod("eval", &LuaState::EvalLuaString),
+      InstanceMethod("getGlobal", &LuaState::GetLuaGlobalValue),
+      InstanceMethod("getLength", &LuaState::GetLuaValueLength),
+      InstanceMethod("setGlobal", &LuaState::SetLuaGlobalValue),
     }
   );
 
@@ -59,9 +60,9 @@ void LuaState::Init(Napi::Env env, Napi::Object exports) {
 }
 
 /**
- * evalLuaFile
+ * EvalLuaFile
  */
-Napi::Value LuaState::evalLuaFile(const Napi::CallbackInfo& info) {
+Napi::Value LuaState::EvalLuaFile(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsString()) {
@@ -70,7 +71,7 @@ Napi::Value LuaState::evalLuaFile(const Napi::CallbackInfo& info) {
   }
 
   auto file_path = info[0].ToString().Utf8Value();
-  auto eval_result = this->ctx_.evalFile(env, file_path);
+  auto eval_result = ctx_.EvalFile(env, file_path);
 
   if (std::holds_alternative<Napi::Error>(eval_result)) {
     std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
@@ -81,9 +82,9 @@ Napi::Value LuaState::evalLuaFile(const Napi::CallbackInfo& info) {
 }
 
 /**
- * evalLuaString
+ * EvalLuaString
  */
-Napi::Value LuaState::evalLuaString(const Napi::CallbackInfo& info) {
+Napi::Value LuaState::EvalLuaString(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsString()) {
@@ -92,7 +93,7 @@ Napi::Value LuaState::evalLuaString(const Napi::CallbackInfo& info) {
   }
 
   auto lua_code = info[0].As<Napi::String>().Utf8Value();
-  auto eval_result = this->ctx_.evalString(env, lua_code);
+  auto eval_result = ctx_.EvalString(env, lua_code);
 
   if (std::holds_alternative<Napi::Error>(eval_result)) {
     std::get<Napi::Error>(eval_result).ThrowAsJavaScriptException();
@@ -103,9 +104,9 @@ Napi::Value LuaState::evalLuaString(const Napi::CallbackInfo& info) {
 }
 
 /**
- * getLuaGlobalValue
+ * GetLuaGlobalValue
  */
-Napi::Value LuaState::getLuaGlobalValue(const Napi::CallbackInfo& info) {
+Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsString()) {
@@ -115,13 +116,13 @@ Napi::Value LuaState::getLuaGlobalValue(const Napi::CallbackInfo& info) {
 
   std::string lua_value_path = info[0].As<Napi::String>();
 
-  return this->ctx_.getLuaValueByPath(env, lua_value_path);
+  return ctx_.GetLuaValueByPath(env, lua_value_path);
 }
 
 /**
- * getLuaValueLength
+ * GetLuaValueLength
  */
-Napi::Value LuaState::getLuaValueLength(const Napi::CallbackInfo& info) {
+Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsString()) {
@@ -131,13 +132,13 @@ Napi::Value LuaState::getLuaValueLength(const Napi::CallbackInfo& info) {
 
   std::string lua_value_path = info[0].As<Napi::String>();
 
-  return this->ctx_.getLuaValueLengthByPath(env, lua_value_path);
+  return ctx_.GetLuaValueLengthByPath(env, lua_value_path);
 }
 
 /**
- * setLuaGlobalValue
+ * SetLuaGlobalValue
  */
-Napi::Value LuaState::setLuaGlobalValue(const Napi::CallbackInfo& info) {
+Napi::Value LuaState::SetLuaGlobalValue(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
   if (info.Length() < 2 || !info[0].IsString()) {
@@ -148,7 +149,7 @@ Napi::Value LuaState::setLuaGlobalValue(const Napi::CallbackInfo& info) {
   std::string name = info[0].As<Napi::String>();
   auto value = info[1].As<Napi::Value>();
 
-  this->ctx_.setLuaValue(name, value);
+  ctx_.SetLuaValue(name, value);
 
   return info.This();
 }

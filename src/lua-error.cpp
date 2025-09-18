@@ -41,8 +41,8 @@ void LuaError::Init(Napi::Env env, Napi::Object exports) {
   lua_error_js_class.Get("prototype").As<Napi::Object>().Set("constructor", lua_error_js_class);
 
   // save js constructor as static variable
-  lua_error_js_constructor = Napi::Persistent(lua_error_js_class);
-  lua_error_js_constructor.SuppressDestruct();
+  lua_error_js_constructor_ = Napi::Persistent(lua_error_js_class);
+  lua_error_js_constructor_.SuppressDestruct();
 
   exports.Set("LuaError", lua_error_js_class);
 }
@@ -51,8 +51,7 @@ void LuaError::Init(Napi::Env env, Napi::Object exports) {
  * factory
  */
 Napi::Error LuaError::New(const Napi::Env& env, const std::string& message, const std::string& stack) {
-  Napi::Object lua_error_js_instance =
-    lua_error_js_constructor.New({Napi::String::New(env, message), Napi::String::New(env, stack)});
+  Napi::Object lua_error_js_instance = lua_error_js_constructor_.New({Napi::String::New(env, message), Napi::String::New(env, stack)});
 
   return Napi::Error(env, lua_error_js_instance);
 }

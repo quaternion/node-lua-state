@@ -14,11 +14,11 @@ private:
   LuaStateContext ctx_;
 
   // --- Eval methods
-  Napi::Value evalLuaFile(const Napi::CallbackInfo& info);
-  Napi::Value evalLuaString(const Napi::CallbackInfo& info);
+  Napi::Value EvalLuaFile(const Napi::CallbackInfo& info);
+  Napi::Value EvalLuaString(const Napi::CallbackInfo& info);
 
   // --- Global methods
-  Napi::Value getLuaGlobalValue(const Napi::CallbackInfo& info);
-  Napi::Value getLuaValueLength(const Napi::CallbackInfo& info);
-  Napi::Value setLuaGlobalValue(const Napi::CallbackInfo& info);
+  Napi::Value GetLuaGlobalValue(const Napi::CallbackInfo& info);
+  Napi::Value GetLuaValueLength(const Napi::CallbackInfo& info);
+  Napi::Value SetLuaGlobalValue(const Napi::CallbackInfo& info);
 };

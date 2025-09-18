@@ -8,5 +8,5 @@ public:
   static Napi::Error New(const Napi::Env&, const std::string&, const std::string& = "");
 
 private:
-  static inline Napi::FunctionReference lua_error_js_constructor;
+  static inline Napi::FunctionReference lua_error_js_constructor_;
 };
