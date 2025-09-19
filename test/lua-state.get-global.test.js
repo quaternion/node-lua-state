@@ -31,7 +31,7 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
   });
 
   describe("of table", () => {
-    describe("simple", () => {
+    describe("with simple table", () => {
       beforeEach(() => {
         luaState.eval(`
         tbl = {
@@ -98,7 +98,7 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
       });
     });
 
-    describe("array", () => {
+    describe("with array", () => {
       it("should get the array table", () => {
         luaState.eval(`
           tbl = {
@@ -112,7 +112,7 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
       });
     });
 
-    describe("circular", () => {
+    describe("with circular table", () => {
       beforeEach(() => {
         luaState.eval(`
           tbl = {
@@ -128,7 +128,7 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
       });
     });
 
-    describe("deep cyclic table", () => {
+    describe("with deep cyclic table", () => {
       beforeEach(() => {
         luaState.eval(`
           function buildDeepTable(size)
@@ -153,7 +153,7 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
     });
   });
 
-  describe("or array", () => {
+  describe("of array", () => {
     beforeEach(() => {
       luaState.eval(`tbl = { "foo", "bar" }`);
     });
