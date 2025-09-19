@@ -350,6 +350,7 @@ namespace {
       return;
     }
 
+    std::vector<Napi::Object> queue;
     std::vector<Napi::Object> visited;
     Napi::Symbol lua_reg_symbol = lua_reg_symbol_ref_.Value();
 
@@ -361,11 +362,29 @@ namespace {
       return lua_reg_index;
     };
 
+    auto push_value_to_lua_stack = [&](const Napi::Value& value) {
+      napi_valuetype value_type = value.Type();
+
+      if (value_type != napi_object) {
+        PushJsPrimitiveToStack(L, value_type, value);
+      } else {
+        Napi::Object child_obj = value.As<Napi::Object>();
+        Napi::Value child_lua_reg_index_prop = child_obj.Get(lua_reg_symbol);
+        int child_lua_reg_index;
+
+        if (child_lua_reg_index_prop.IsNumber()) {
+          child_lua_reg_index = child_lua_reg_index_prop.As<Napi::Number>().Uint32Value();
+        } else {
+          child_lua_reg_index = create_table_for(child_obj);
+          queue.push_back(child_obj);
+        }
+
+        lua_rawgeti(L, LUA_REGISTRYINDEX, child_lua_reg_index);
+      }
+    };
+
     Napi::Object root_obj = value.As<Napi::Object>();
-
     int root_lua_reg_index = create_table_for(root_obj);
-
-    std::vector<Napi::Object> queue;
     queue.push_back(root_obj);
 
     while (!queue.empty()) {
@@ -375,32 +394,24 @@ namespace {
       int current_lua_reg_index = current_obj.Get(lua_reg_symbol).As<Napi::Number>().Int32Value();
       lua_rawgeti(L, LUA_REGISTRYINDEX, current_lua_reg_index);
 
-      Napi::Array prop_names = current_obj.GetPropertyNames();
+      if (current_obj.IsArray()) {
+        Napi::Array arr = current_obj.As<Napi::Array>();
 
-      for (uint32_t i = 0; i < prop_names.Length(); ++i) {
-        Napi::Value prop_name = prop_names.Get(i);
-        Napi::Value prop_value = current_obj.Get(prop_name);
-        napi_valuetype prop_value_type = prop_value.Type();
-
-        if (prop_value_type != napi_object) {
-          PushJsPrimitiveToStack(L, prop_value_type, prop_value);
-        } else {
-          Napi::Object child_obj = prop_value.As<Napi::Object>();
-          Napi::Value child_lua_reg_index_prop = child_obj.Get(lua_reg_symbol);
-          int child_lua_reg_index;
-
-          if (!child_lua_reg_index_prop.IsNumber()) {
-            child_lua_reg_index = create_table_for(child_obj);
-            queue.push_back(child_obj);
-          } else {
-            child_lua_reg_index = child_lua_reg_index_prop.As<Napi::Number>().Uint32Value();
-          }
-
-          lua_rawgeti(L, LUA_REGISTRYINDEX, child_lua_reg_index);
+        for (uint32_t i = 0; i < arr.Length(); ++i) {
+          Napi::Value elem = arr.Get(i);
+          push_value_to_lua_stack(elem);
+          lua_seti(L, -2, i + 1);
         }
+      } else {
+        Napi::Array prop_names = current_obj.GetPropertyNames();
 
-        std::string prop_name_str = prop_name.As<Napi::String>().Utf8Value();
-        lua_setfield(L, -2, prop_name_str.c_str());
+        for (uint32_t i = 0; i < prop_names.Length(); ++i) {
+          Napi::Value prop_name = prop_names.Get(i);
+          Napi::Value prop_value = current_obj.Get(prop_name);
+          push_value_to_lua_stack(prop_value);
+          std::string prop_name_str = prop_name.As<Napi::String>().Utf8Value();
+          lua_setfield(L, -2, prop_name_str.c_str());
+        }
       }
 
       lua_pop(L, 1);

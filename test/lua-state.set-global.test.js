@@ -80,6 +80,19 @@ describe(LuaState.name + "#" + LuaState.prototype.setGlobal.name, () => {
     });
   });
 
+  describe("with array", () => {
+    it("should set the array", () => {
+      const arr = [42, "foo", true];
+      luaState.setGlobal("tbl", arr);
+      deepStrictEqual(luaState.eval(`return tbl`), {
+        1: 42,
+        2: "foo",
+        3: true,
+      });
+      deepStrictEqual(luaState.eval(`return tbl[1], tbl[2], tbl[3]`), arr);
+    });
+  });
+
   describe("with function", () => {
     it("should set the function", () => {
       const func = mock.fn((num, str, bool, tbl) => {
