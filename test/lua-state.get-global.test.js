@@ -98,6 +98,20 @@ describe(LuaState.name + "#" + LuaState.prototype.getGlobal.name, () => {
       });
     });
 
+    describe("array", () => {
+      it("should get the array table", () => {
+        luaState.eval(`
+          tbl = {
+            42,
+            'foo',
+            true,
+          }
+        `);
+        const tbl = luaState.getGlobal("tbl");
+        deepStrictEqual(tbl, { 1: 42, 2: "foo", 3: true });
+      });
+    });
+
     describe("circular", () => {
       beforeEach(() => {
         luaState.eval(`
