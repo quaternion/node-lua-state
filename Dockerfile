@@ -24,10 +24,11 @@ USER node
 
 WORKDIR /home/node/lua-state
 
+COPY --chown=node:node --chmod=755 entrypoint.sh ./
 COPY --chown=node:node package*.json binding.gyp ./
 COPY --chown=node:node src ./src
 COPY --chown=node:node scripts ./scripts
 
-RUN npm install
+ENTRYPOINT ["./entrypoint.sh"]
 
 CMD ["sleep", "infinity"]

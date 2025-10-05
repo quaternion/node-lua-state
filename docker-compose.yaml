@@ -1,7 +1,6 @@
 services:
   dev:
     container_name: node-lua-state
-    command: sleep infinity
     build:
       context: .
       dockerfile: Dockerfile
