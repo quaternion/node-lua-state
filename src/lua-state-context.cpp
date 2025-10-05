@@ -260,6 +260,7 @@ namespace {
     struct JsObjectLuaRegIndex {
       Napi::Object obj;
       int lua_reg_index;
+      JsObjectLuaRegIndex(const Napi::Object& obj_, int lua_reg_index_) : obj(obj_), lua_reg_index(lua_reg_index_) {}
     };
     std::vector<JsObjectLuaRegIndex> queue;
 
