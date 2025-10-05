@@ -1,8 +1,7 @@
 const fs = require("node:fs");
 const https = require("node:https");
-const path = require("node:path");
 
-function download({ url, dest }) {
+function downloadFile({ url, dest }) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https
@@ -12,10 +11,10 @@ function download({ url, dest }) {
           res.statusCode < 400 &&
           res.headers.location
         ) {
-          return resolve(download({ url: res.headers.location, dest }));
+          return resolve(downloadFile({ url: res.headers.location, dest }));
         }
         if (res.statusCode !== 200) {
-          return reject(new Error("Download failed: " + res.statusCode));
+          return reject(new Error(`${res.statusCode} ${res.statusMessage}`));
         }
         res.pipe(file);
         file.on("finish", () =>
@@ -31,5 +30,5 @@ function download({ url, dest }) {
 }
 
 module.exports = {
-  download,
+  downloadFile,
 };

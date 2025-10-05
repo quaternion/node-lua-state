@@ -1,3 +1,0 @@
-class LuaBinary {
-  constructor({ arch }) {}
-}

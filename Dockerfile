@@ -1,6 +1,7 @@
 FROM node:24.4.1-bookworm-slim AS build
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmjs.org
+ENV COREPACK_NPM_REGISTRY=https://registry.npmjs.org, \
+    LUA_DOWNLOAD_DIR=/home/node/lua-state/deps
 
 RUN <<EOF
 set -xe
@@ -26,6 +27,7 @@ WORKDIR /home/node/lua-state
 
 COPY --chown=node:node --chmod=755 entrypoint.sh ./
 COPY --chown=node:node package*.json binding.gyp ./
+COPY --chown=node:node build-tools ./build-tools
 COPY --chown=node:node src ./src
 COPY --chown=node:node scripts ./scripts
 
