@@ -8,4 +8,4 @@ services:
       HISTFILE: /home/node/lua-state/tmp/.bash-history
       PROMPT_COMMAND: "history -a"
     volumes:
-      - .:/home/node/lua-state:cache
+      - .:/home/node/lua-state:delegated
