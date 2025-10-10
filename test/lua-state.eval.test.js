@@ -1,6 +1,6 @@
-const { LuaError, LuaState } = require("../index");
 const { beforeEach, describe, it } = require("node:test");
 const { deepStrictEqual, strictEqual, throws } = require("node:assert/strict");
+const { LuaState, LuaError } = require("../js");
 
 describe(LuaState.name + "#" + LuaState.prototype.eval.name, () => {
   let luaState;

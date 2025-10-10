@@ -6,8 +6,8 @@
   "license": "MIT",
   "author": "quaternion",
   "type": "commonjs",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "js/index.js",
+  "types": "types/index.d.ts",
   "gypfile": false,
   "preferUnplugged": true,
   "engines": {
@@ -18,12 +18,12 @@
     "url": "git@github.com:quaternion/node-lua-state.git"
   },
   "files": [
-    "binding.gyp",
-    "index.js",
-    "index.d.ts",
-    "build-tools/*.js",
-    "scripts/install.js",
-    "src/*"
+    "build-tools",
+    "js",
+    "scripts",
+    "src",
+    "types",
+    "binding.gyp"
   ],
   "binary": {
     "module_name": "node-lua-state",

@@ -1,6 +1,5 @@
 /build
 /deps
-/prebuilds
 /node_modules
 /tmp/**
 

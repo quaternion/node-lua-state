@@ -2,11 +2,5 @@
   "compilerOptions": {
     "checkJs": true,
     "resolveJsonModule": true
-  },
-  "include": [
-    "types/**/*.d.ts",
-    "build-tools/**/*.js",
-    "test/**/*.js",
-    "index.js"
-  ]
+  }
 }

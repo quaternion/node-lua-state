@@ -1,6 +1,6 @@
-const { LuaError } = require("../index");
 const { describe, it } = require("node:test");
 const { ok, strictEqual } = require("node:assert/strict");
+const { LuaError } = require("../js");
 
 describe(LuaError.name, () => {
   it("should be name LuaError", () => {
