@@ -7,11 +7,11 @@
         "<@(lua_include_dirs)"
       ],
       "sources": [
+        "<@(lua_sources)",
         "src/init.cpp",
         "src/lua-error.cpp",
         "src/lua-state-context.cpp",
         "src/lua-state.cpp",
-        "<@(lua_sources)"
       ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').targets\"):node_addon_api"
