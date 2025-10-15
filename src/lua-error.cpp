@@ -1,5 +1,4 @@
 #include "lua-error.h"
-#include <iostream>
 
 /**
  * napi initializer
