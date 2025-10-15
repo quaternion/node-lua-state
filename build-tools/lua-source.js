@@ -121,10 +121,10 @@ if (require.main === module) {
 
   let luaSource;
 
-  const luaEnvSourceDir = getEnvLuaSourceDir();
+  const envLuaSourceDir = getEnvLuaSourceDir();
 
-  if (luaEnvSourceDir) {
-    luaSource = new DirLuaSource({ rootDir: luaEnvSourceDir });
+  if (envLuaSourceDir) {
+    luaSource = new DirLuaSource({ rootDir: envLuaSourceDir });
   } else {
     const luaEnvVersion = getEnvLuaVersion();
 
@@ -134,7 +134,7 @@ if (require.main === module) {
     });
   }
 
-  if (flag === "--dir") {
+  if (flag === "--include-dirs") {
     process.stdout.write(
       luaSource.includeDirs
         .map((includeDir) => path.relative(process.cwd(), includeDir))
@@ -147,7 +147,7 @@ if (require.main === module) {
         .join(" ")
     );
   } else {
-    logger.error("Usage: node lua-source.js [--dir | --sources]");
+    logger.error("Usage: node lua-source.js [--include-dirs | --sources]");
     process.exit(1);
   }
 }

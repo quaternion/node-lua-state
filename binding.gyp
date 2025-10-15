@@ -1,13 +1,10 @@
 {
   "defines": [ "NAPI_VERSION=8" ],
-  "variables": {
-    "lua_source_dir%": "<!(node build-tools/lua-source.js --dir)",
-  },
   "targets": [
     {
       "target_name": "lua-state",
       "include_dirs": [
-        "<@(lua_source_dir)"
+        "<@(lua_include_dirs)"
       ],
       "sources": [
         "src/init.cpp",
@@ -22,7 +19,8 @@
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
       "variables": {
-        "lua_sources": "<!(node build-tools/lua-source.js --sources)"
+        "lua_include_dirs%": "<!(node build-tools/lua-source.js --include-dirs)",
+        "lua_sources%": "<!(node build-tools/lua-source.js --sources)"
       }
     }
   ]
