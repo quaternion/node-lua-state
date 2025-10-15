@@ -10,8 +10,9 @@ const {
 } = require("./env");
 
 class DirLuaSource {
-  constructor({ rootDir }) {
+  constructor({ rootDir, srcDir = undefined }) {
     this.rootDir = path.resolve(rootDir);
+    this.srcDir = srcDir || this.rootDir;
   }
 
   get isPresent() {
@@ -29,7 +30,7 @@ class DirLuaSource {
     ]);
 
     const result = fs
-      .readdirSync(this.rootDir, { withFileTypes: true, recursive: true })
+      .readdirSync(this.srcDir, { withFileTypes: true, recursive: true })
       .filter((fileOrDir) => {
         return (
           fileOrDir.isFile() &&
@@ -52,10 +53,14 @@ class DirLuaSource {
     const allDirs = fs
       .readdirSync(this.rootDir, { withFileTypes: true })
       .filter((fileOrDir) => fileOrDir.isDirectory());
-    const includeDirs = [];
+
+    const includeDirs = [this.srcDir];
 
     for (const dir of allDirs) {
       const dirPath = path.join(dir.parentPath, dir.name);
+      if (dirPath === this.srcDir) {
+        continue;
+      }
       const dirFiles = fs.readdirSync(dirPath, {
         withFileTypes: true,
         recursive: true,
@@ -75,8 +80,9 @@ class DirLuaSource {
 class OfficialLuaSource extends DirLuaSource {
   constructor({ version, parentDir }) {
     const rootDir = path.resolve(parentDir, `lua-${version}`);
+    const srcDir = path.join(rootDir, "src");
 
-    super({ rootDir });
+    super({ rootDir, srcDir });
 
     this.version = version;
     this.parentDir = parentDir;

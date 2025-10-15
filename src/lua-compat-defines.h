@@ -2,6 +2,10 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+#ifndef LUA_OK
+#define LUA_OK 0
+#endif
+
 #if LUA_VERSION_NUM <= 501
 /**
  * Compatibility shim for luaL_requiref, which was added in Lua 5.2.
@@ -49,4 +53,40 @@ static void lua_len_compat(lua_State* L, int idx) {
   }
 }
 #define lua_len(L, idx) lua_len_compat(L, idx)
+
+static void luaL_traceback(lua_State* L, lua_State* L1, const char* msg, int level) {
+  lua_getglobal(L, "debug");
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    if (msg)
+      lua_pushstring(L, msg);
+    return;
+  }
+  lua_getfield(L, -1, "traceback");
+  if (!lua_isfunction(L, -1)) {
+    lua_pop(L, 2);
+    if (msg)
+      lua_pushstring(L, msg);
+    return;
+  }
+  lua_remove(L, -2); // remove "debug"
+  if (msg)
+    lua_pushstring(L, msg);
+  else
+    lua_pushnil(L);
+  lua_pushinteger(L, level);
+  lua_call(L, 2, 1);
+}
+
+#define lua_absindex(L, i) ((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : lua_gettop(L) + (i) + 1)
+
+#endif
+
+#if LUA_VERSION_NUM < 503
+inline void lua_seti(lua_State* L, int index, lua_Integer n) {
+  int abs_index = lua_absindex(L, index);
+  lua_pushinteger(L, n); // push key
+  lua_insert(L, -2);     // move key before value
+  lua_settable(L, abs_index);
+}
 #endif
