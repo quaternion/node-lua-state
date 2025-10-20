@@ -3,11 +3,7 @@ const path = require("node:path");
 
 const logger = require("./logger");
 const { fetchTarball } = require("./artifact");
-const {
-  getEnvLuaSourceDir,
-  getEnvLuaVersion,
-  getEnvLuaDownloadDir,
-} = require("./env");
+const { LuaEnv } = require("./env");
 
 class DirLuaSource {
   constructor({ rootDir, srcDir = undefined }) {
@@ -116,38 +112,51 @@ module.exports = {
 };
 
 // export for binding.gyp
-if (require.main === module) {
+if (require.main === module) {  
+  const mode = LuaEnv.mode;
+
+  const buildLuaSource = () => {
+    if (mode === "source") {
+      return new DirLuaSource({ rootDir: LuaEnv.sourceDir });
+    } else {
+      return new OfficialLuaSource({
+        version: LuaEnv.version,
+        parentDir: LuaEnv.downloadDir,
+      });
+    }
+  };
+
+  const buildIncludeDirsStr = () => {
+    if (mode === "system") {
+      return LuaEnv.includeDirs;
+    }
+
+    return buildLuaSource()
+      .includeDirs.map((includeDir) => path.relative(process.cwd(), includeDir))
+      .join(" ");
+  };
+
+  const buildSourcesStr = () => {
+    if (mode === "system") {
+      return LuaEnv.sources || "";
+    }
+
+    return buildLuaSource()
+      .sources.map((source) => path.relative(process.cwd(), source))
+      .join(" ");
+  };
+
   const flag = process.argv[2];
-
-  let luaSource;
-
-  const envLuaSourceDir = getEnvLuaSourceDir();
-
-  if (envLuaSourceDir) {
-    luaSource = new DirLuaSource({ rootDir: envLuaSourceDir });
-  } else {
-    const luaEnvVersion = getEnvLuaVersion();
-
-    luaSource = new OfficialLuaSource({
-      version: luaEnvVersion,
-      parentDir: getEnvLuaDownloadDir(),
-    });
-  }
-
   if (flag === "--include-dirs") {
-    process.stdout.write(
-      luaSource.includeDirs
-        .map((includeDir) => path.relative(process.cwd(), includeDir))
-        .join(" ")
-    );
+    process.stdout.write(buildIncludeDirsStr());
   } else if (flag == "--sources") {
-    process.stdout.write(
-      luaSource.sources
-        .map((source) => path.relative(process.cwd(), source))
-        .join(" ")
-    );
+    process.stdout.write(buildSourcesStr());
+  } else if (flag == "--libraries") {
+    process.stdout.write(LuaEnv.libraries || "");
   } else {
-    logger.error("Usage: node lua-source.js [--include-dirs | --sources]");
-    process.exit(1);
+    logger.error(
+      "Usage: node lua-source.js [--include-dirs | --sources | --libraries]"
+    );
+    process.exitCode = 1;
   }
 }

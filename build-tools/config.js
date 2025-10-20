@@ -1,39 +1,52 @@
-const DEFAULT_REPOSITORY = "quaternion/node-lua-state";
+const fs = require("fs");
+const libc = require("detect-libc");
+const path = require("path");
+const pkg = require("../package.json");
 
-function getRepository() {
-  return (
-    process.env.LUA_STATE_REPOSITORY ||
-    process.env.GITHUB_REPOSITORY ||
-    DEFAULT_REPOSITORY
-  );
-}
+const Binary = {
+  get dir() {
+    return path.join(__dirname, "..", "build", "Release");
+  },
+  get path() {
+    return path.join(Binary.dir, "lua-state.node");
+  },
+  get isExists() {
+    return fs.existsSync(Binary.path);
+  },
+};
 
-function getBinaryName({
-  pkgVersion,
+const BinaryRelease = ({
   luaVersion,
-  platform,
-  arch,
-  family = undefined,
-}) {
-  return `lua-state-v${pkgVersion}-lua-v${luaVersion}-${platform}-${arch}${
-    family ? "-" + family : ""
-  }.tar.gz`;
-}
+  pkgVersion = pkg.version,
+  platform = process.platform,
+  arch = process.arch,
+  family = libc.familySync(),
+}) => {
+  const familyStr = family ? `-${family}` : "";
+  const name = `lua-state-v${pkgVersion}-lua-v${luaVersion}-${platform}-${arch}${familyStr}.tar.gz`;
+  const url = `${Repository.url}/releases/download/${name}`;
 
-function getBinaryUrl({ pkgVersion, luaVersion, platform, arch, family }) {
-  const repository = getRepository();
-  const binaryName = getBinaryName({
-    pkgVersion,
-    luaVersion,
-    platform,
-    arch,
-    family,
-  });
-  return `https://github.com/${repository}/releases/download/${binaryName}`;
-}
+  return {
+    name,
+    url,
+  };
+};
+
+const Repository = {
+  get name() {
+    return (
+      process.env.LUA_STATE_REPOSITORY ||
+      process.env.GITHUB_REPOSITORY ||
+      "quaternion/node-lua-state"
+    );
+  },
+  get url() {
+    return `https://github.com/${Repository.name}`;
+  },
+};
 
 module.exports = {
-  getRepository,
-  getBinaryName,
-  getBinaryUrl,
+  Binary,
+  BinaryRelease,
+  Repository,
 };

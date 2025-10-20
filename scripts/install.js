@@ -1,102 +1,122 @@
-const fs = require("fs");
-const path = require("path");
-const libc = require("detect-libc");
 const { spawnSync } = require("child_process");
 
-const { version: pkgVersion } = require("../package.json");
-const {
-  getEnvLuaVersion,
-  getEnvLuaSourceDir,
-  getEnvForceBuild,
-  getEnvLuaDownloadDir,
-} = require("../build-tools/env");
+const { LuaEnv } = require("../build-tools/env");
 const {
   OfficialLuaSource,
   DirLuaSource,
 } = require("../build-tools/lua-source");
 const logger = require("../build-tools/logger");
-const { getBinaryUrl } = require("../build-tools/config");
+const { BinaryRelease, Binary } = require("../build-tools/config");
 const { fetchTarball } = require("../build-tools/artifact");
 
-async function install(luaVersion = getEnvLuaVersion()) {
-  logger.log(`Requested Lua version: ${luaVersion}`);
-
-  if (!getEnvForceBuild()) {
-    const downloadStatus = await downloadBinary({ luaVersion });
-    if (downloadStatus === true) {
-      return true;
-    }
-    logger.log("No prebuilt binary found, falling back to source build.");
+async function install(luaVersion = LuaEnv.version) {
+  try {
+    LuaEnv.validate();
+  } catch (error) {
+    logger.error(error?.message);
+    return false;
   }
 
-  return buildFromSource({ luaVersion });
+  const luaMode = LuaEnv.mode;
+  logger.log(`Mode "${luaMode}"`);
+
+  if (!LuaEnv.forceBuild) {
+    const prepared = await prepareBinary({ luaMode, luaVersion });
+    if (prepared) {
+      return true;
+    }
+    logger.log("No prebuilt binary found, falling back to build...");
+  }
+
+  const sourcesPrepared = await prepareSources({ luaMode, luaVersion });
+  if (!sourcesPrepared) {
+    return false;
+  }
+
+  if (!runNodeGyp(["rebuild"])) {
+    logger.error("Built failed.");
+    return false;
+  }
+
+  logger.log("Built successfully.");
+  return true;
 }
 
-async function downloadBinary({ luaVersion }) {
-  const binaryDestDir = path.join(__dirname, "..", "build", "Release");
-  const binaryPath = path.join(binaryDestDir, "lua-state.node");
-
-  if (fs.existsSync(binaryPath)) {
-    logger.log(`Binary already exists at ${binaryPath}`);
+async function prepareSources({ luaMode, luaVersion }) {
+  if (luaMode === "system") {
+    logger.log("Using system Lua libraries...");
     return true;
   }
 
-  logger.log(`Trying to download prebuilt binary for lua ${luaVersion}...`);
+  if (luaMode === "source") {
+    logger.log("Using user-provided Lua sources...");
+    return prepareCustomLuaSources();
+  }
 
-  const binaryUrl = getBinaryUrl({
-    pkgVersion,
-    luaVersion,
-    platform: process.platform,
-    arch: process.arch,
-    family: libc.familySync(),
-  });
+  logger.log("Using official Lua sources...");
+  return await prepareOfficialLuaSources({ luaVersion });
+}
+
+async function prepareBinary({ luaMode, luaVersion }) {
+  if (Binary.isExists) {
+    logger.log(`Binary already exists at ${Binary.path}`);
+    return true;
+  }
+
+  if (luaMode !== "download") {
+    return false;
+  }
+
+  const binaryRelease = BinaryRelease({ luaVersion });
 
   try {
-    await fetchTarball({ url: binaryUrl, destDir: binaryDestDir });
-    logger.log(`Binary downloaded from ${binaryUrl}`);
+    logger.log(
+      `Trying to download prebuilt binary for lua ${luaVersion} from ${binaryRelease.url}...`
+    );
+    await fetchTarball({ url: binaryRelease.url, destDir: Binary.dir });
+    logger.log(`Binary downloaded.`);
     return true;
   } catch (err) {
     return false;
   }
 }
 
-async function buildFromSource({ luaVersion }) {
-  logger.log("Trying build from source...");
-  const luaEnvSourceDir = getEnvLuaSourceDir();
-
-  if (luaEnvSourceDir) {
-    const luaSource = new DirLuaSource({ rootDir: luaEnvSourceDir });
-    if (!luaSource.isPresent) {
-      logger.error(`Lua sources not found at ${luaSource.rootDir}`);
-      return false;
-    }
-  } else {
-    const luaSource = new OfficialLuaSource({
-      version: luaVersion,
-      parentDir: getEnvLuaDownloadDir(),
-    });
-
-    if (luaSource.isPresent) {
-      logger.log(`Found Lua sources at ${luaSource.rootDir}`);
-    } else {
-      logger.log(
-        `Lua sources not found at ${luaSource.rootDir}, downloading...`
-      );
-
-      try {
-        await luaSource.download();
-      } catch (error) {
-        logger.error("Failed to download Lua sources.", error?.message);
-        return false;
-      }
-    }
-  }
-
-  if (!runNodeGyp(["rebuild"])) {
-    logger.error("Built from source failed.");
+function prepareCustomLuaSources() {
+  const luaEnvSourceDir = LuaEnv.sourceDir;
+  if (!luaEnvSourceDir) {
+    logger.error(`LUA_SOURCE_DIR must be set when LUA_MODE=source`);
     return false;
   }
-  logger.log("Built from source successfully.");
+
+  const luaSource = new DirLuaSource({ rootDir: luaEnvSourceDir });
+  if (!luaSource.isPresent) {
+    logger.error(`Lua sources not found at ${luaSource.srcDir}`);
+    return false;
+  }
+
+  return true;
+}
+
+async function prepareOfficialLuaSources({ luaVersion }) {
+  logger.log(`Requested Lua version: ${luaVersion}`);
+
+  const luaSource = new OfficialLuaSource({
+    version: luaVersion,
+    parentDir: LuaEnv.downloadDir,
+  });
+
+  if (luaSource.isPresent) {
+    logger.log(`Found Lua sources at ${luaSource.srcDir}`);
+  } else {
+    logger.log(`Lua sources not found at ${luaSource.srcDir}, downloading...`);
+
+    try {
+      await luaSource.download();
+    } catch (error) {
+      logger.error("Failed to download Lua sources.", error?.message);
+      return false;
+    }
+  }
 
   return true;
 }
@@ -135,6 +155,12 @@ function runNodeGyp(args = []) {
 }
 
 if (require.main === module) {
+  process.on("SIGINT", () => {
+    logger.error("Interrupted.");
+    process.exitCode = 1;
+    process.exit();
+  });
+
   install()
     .then((res) => {
       if (res) {
@@ -150,9 +176,3 @@ if (require.main === module) {
       process.exitCode = 1;
     });
 }
-
-process.on("SIGINT", () => {
-  logger.error("Interrupted.");
-  process.exitCode = 1;
-  process.exit();
-});

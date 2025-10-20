@@ -13,6 +13,9 @@
         "src/lua-state-context.cpp",
         "src/lua-state.cpp",
       ],
+      "libraries": [
+        "<@(lua_libraries)"
+      ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').targets\"):node_addon_api"
       ],
@@ -20,7 +23,8 @@
       "cflags_cc!": [ "-fno-exceptions" ],
       "variables": {
         "lua_include_dirs%": "<!(node build-tools/lua-source.js --include-dirs)",
-        "lua_sources%": "<!(node build-tools/lua-source.js --sources)"
+        "lua_sources%": "<!(node build-tools/lua-source.js --sources)",
+        "lua_libraries%": "<!(node build-tools/lua-source.js --libraries)",
       }
     }
   ]
