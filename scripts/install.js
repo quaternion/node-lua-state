@@ -1,6 +1,6 @@
 const { spawnSync } = require("child_process");
 
-const { LuaEnv } = require("../build-tools/env");
+const { LuaEnv, LuaStateEnv } = require("../build-tools/env");
 const {
   OfficialLuaSource,
   DirLuaSource,
@@ -17,10 +17,10 @@ async function install(luaVersion = LuaEnv.version) {
     return false;
   }
 
-  const luaMode = LuaEnv.mode;
+  const luaMode = LuaStateEnv.mode;
   logger.log(`Mode "${luaMode}"`);
 
-  if (!LuaEnv.forceBuild) {
+  if (!LuaStateEnv.forceBuild) {
     const prepared = await prepareBinary({ luaMode, luaVersion });
     if (prepared) {
       return true;
@@ -102,7 +102,7 @@ async function prepareOfficialLuaSources({ luaVersion }) {
 
   const luaSource = new OfficialLuaSource({
     version: luaVersion,
-    parentDir: LuaEnv.downloadDir,
+    parentDir: LuaStateEnv.downloadDir,
   });
 
   if (luaSource.isPresent) {

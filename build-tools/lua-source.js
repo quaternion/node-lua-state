@@ -3,7 +3,7 @@ const path = require("node:path");
 
 const logger = require("./logger");
 const { fetchTarball } = require("./artifact");
-const { LuaEnv } = require("./env");
+const { LuaEnv, LuaStateEnv } = require("./env");
 
 class DirLuaSource {
   constructor({ rootDir, srcDir = undefined }) {
@@ -112,8 +112,8 @@ module.exports = {
 };
 
 // export for binding.gyp
-if (require.main === module) {  
-  const mode = LuaEnv.mode;
+if (require.main === module) {
+  const mode = LuaStateEnv.mode;
 
   const buildLuaSource = () => {
     if (mode === "source") {
@@ -121,7 +121,7 @@ if (require.main === module) {
     } else {
       return new OfficialLuaSource({
         version: LuaEnv.version,
-        parentDir: LuaEnv.downloadDir,
+        parentDir: LuaStateEnv.downloadDir,
       });
     }
   };

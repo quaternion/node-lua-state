@@ -1,7 +1,6 @@
 FROM node:24.4.1-bookworm-slim AS build
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmjs.org, \
-    LUA_DOWNLOAD_DIR=/home/node/lua-state/deps
+ENV COREPACK_NPM_REGISTRY=https://registry.npmjs.org    
 
 RUN <<EOF
 set -xe

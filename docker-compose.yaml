@@ -7,5 +7,6 @@ services:
     environment:
       HISTFILE: /home/node/lua-state/tmp/.bash-history
       PROMPT_COMMAND: "history -a"
+      LUA_STATE_DOWNLOAD_DIR: /home/node/lua-state/deps
     volumes:
       - .:/home/node/lua-state:delegated

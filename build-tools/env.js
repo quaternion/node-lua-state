@@ -4,9 +4,9 @@ const os = require("node:os");
 const DEFAULT_LUA_MODE = "download";
 const DEFAULT_LUA_VERSION = "5.4.8";
 
-const LuaEnv = {
+const LuaStateEnv = {
   get mode() {
-    const explicitMode = getEnvVariable("LUA_MODE");
+    const explicitMode = getEnvVariable("LUA_STATE_MODE");
     if (explicitMode) {
       return explicitMode;
     }
@@ -22,7 +22,25 @@ const LuaEnv = {
 
     return DEFAULT_LUA_MODE;
   },
+  get downloadDir() {
+    const cacheDir =
+      process.env.npm_config_cache ||
+      process.env.XDG_CACHE_HOME ||
+      path.join(os.homedir(), ".cache");
 
+    return (
+      getEnvVariable("LUA_STATE_DOWNLOAD_DIR") ||
+      path.join(cacheDir, "lua-state", "deps")
+    );
+  },
+
+  get forceBuild() {
+    const forceBuild = getEnvVariable("LUA_STATE_FORCE_BUILD");
+    return ["1", "true", "yes", "on", "y"].includes(String(forceBuild).trim());
+  },
+};
+
+const LuaEnv = {
   get version() {
     return getEnvVariable("LUA_VERSION") || DEFAULT_LUA_VERSION;
   },
@@ -54,26 +72,9 @@ const LuaEnv = {
     return getEnvVariable("LUA_LIBRARIES");
   },
 
-  get downloadDir() {
-    const cacheDir =
-      process.env.npm_config_cache ||
-      process.env.XDG_CACHE_HOME ||
-      path.join(os.homedir(), ".cache");
-
-    return (
-      getEnvVariable("LUA_DOWNLOAD_DIR") ||
-      path.join(cacheDir, "lua-state", "deps")
-    );
-  },
-
-  get forceBuild() {
-    const forceBuild = getEnvVariable("LUA_FORCE_BUILD");
-    return ["1", "true", "yes", "on", "y"].includes(String(forceBuild).trim());
-  },
-
   validate() {
     const allowedModes = new Set(["download", "source", "system"]);
-    const mode = this.mode;
+    const mode = LuaStateEnv.mode;
 
     const errors = [];
 
@@ -119,10 +120,12 @@ const LuaEnv = {
 function getEnvVariable(variableName) {
   const variable =
     process.env[variableName] ||
-    process.env[`npm_config_${variableName.toLowerCase()}`];
+    process.env[`npm_config_${variableName.toLowerCase()}`] ||
+    process.env[`npm_config_lua_state_${variableName.toLowerCase()}`];
   return variable?.trim();
 }
 
 module.exports = {
+  LuaStateEnv,
   LuaEnv,
 };
