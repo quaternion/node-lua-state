@@ -37,6 +37,9 @@
       8
     ]
   },
+  "bin": {
+    "lua-state": "./bin/lua-state.js"
+  },
   "scripts": {
     "install": "node scripts/install.js",
     "pack:linux": "tar -czf lua-state-v1.0.0-napi-v8-linux-x64.tar.gz package.json prebuilds/linux-x64/",
