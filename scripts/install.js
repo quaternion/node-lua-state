@@ -148,7 +148,9 @@ function runNodeGyp(args = []) {
   const spawnResult = spawnSync(command, fullArgs, { stdio: "inherit" });
 
   if (spawnResult.status !== 0) {
-    logger.error(`node-gyp exited with code ${spawnResult.status}`);
+    logger.error(
+      `node-gyp exited with code ${spawnResult.status || spawnResult.signal}`
+    );
   }
 
   return spawnResult.status === 0;
@@ -157,8 +159,7 @@ function runNodeGyp(args = []) {
 if (require.main === module) {
   process.on("SIGINT", () => {
     logger.error("Interrupted.");
-    process.exitCode = 1;
-    process.exit();
+    process.exit(130);
   });
 
   install()
@@ -174,5 +175,8 @@ if (require.main === module) {
     .catch((err) => {
       logger.error(err?.message);
       process.exitCode = 1;
+    })
+    .finally(() => {
+      process.exit(process.exitCode ?? 1);
     });
 }
