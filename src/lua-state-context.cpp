@@ -81,11 +81,6 @@ void LuaStateContext::OpenLibs(const std::optional<std::vector<std::string>>& li
   }
 }
 
-void LuaStateContext::SetLuaValue(const std::string& name, const Napi::Value& value) {
-  PushJsValueToStack(L_, value);
-  lua_setglobal(L_, name.c_str());
-}
-
 std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalFile(const Napi::Env& env, const std::string& file_path) {
   auto load_file_status = luaL_loadfile(L_, file_path.c_str());
 
@@ -104,6 +99,11 @@ std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalString(const Napi::E
   }
 
   return CallLuaFunctionOnStack(L_, env, 0);
+}
+
+void LuaStateContext::SetLuaValue(const std::string& name, const Napi::Value& value) {
+  PushJsValueToStack(L_, value);
+  lua_setglobal(L_, name.c_str());
 }
 
 Napi::Value LuaStateContext::GetLuaValueByPath(const Napi::Env& env, const std::string& lua_value_path) {
@@ -144,6 +144,30 @@ Napi::Value LuaStateContext::GetLuaValueLengthByPath(const Napi::Env& env, const
   lua_pop(L_, 1);
 
   return result;
+}
+
+std::string LuaStateContext::GetLuaVersion() {
+  std::string compileTime;
+
+#ifdef LUAJIT_VERSION
+  compileTime = LUAJIT_VERSION;
+#elif defined(LUA_RELEASE)
+  compileTime = LUA_RELEASE;
+#elif defined(LUA_VERSION)
+  compileTime = LUA_VERSION;
+#else
+  compileTime = "Lua (unknown version)";
+#endif
+
+  lua_getglobal(L_, "_VERSION");
+  std::string runtime = lua_tostring(L_, -1);
+  lua_pop(L_, 1);
+
+  if (runtime == compileTime || compileTime.find(runtime) != std::string::npos) {
+    return compileTime;
+  }
+
+  return runtime + " (compiled with " + compileTime + ")";
 }
 
 Napi::Function LuaStateContext::FindOrCreateJsFunction(const Napi::Env& env, int lua_stack_index) {

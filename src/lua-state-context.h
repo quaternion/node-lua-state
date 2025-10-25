@@ -18,13 +18,15 @@ public:
   static LuaStateContext* From(lua_State*);
 
   void OpenLibs(const std::optional<std::vector<std::string>>&);
-  void SetLuaValue(const std::string&, const Napi::Value&);
 
   std::variant<Napi::Value, Napi::Error> EvalFile(const Napi::Env&, const std::string&);
   std::variant<Napi::Value, Napi::Error> EvalString(const Napi::Env&, const std::string&);
 
+  void SetLuaValue(const std::string&, const Napi::Value&);
+
   Napi::Value GetLuaValueByPath(const Napi::Env&, const std::string&);
   Napi::Value GetLuaValueLengthByPath(const Napi::Env&, const std::string&);
+  std::string GetLuaVersion();
 
   Napi::Function FindOrCreateJsFunction(const Napi::Env&, int);
 

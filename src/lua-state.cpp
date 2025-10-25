@@ -49,6 +49,7 @@ void LuaState::Init(Napi::Env env, Napi::Object exports) {
       InstanceMethod("eval", &LuaState::EvalLuaString),
       InstanceMethod("getGlobal", &LuaState::GetLuaGlobalValue),
       InstanceMethod("getLength", &LuaState::GetLuaValueLength),
+      InstanceMethod("getVersion", &LuaState::GetLuaVersion),
       InstanceMethod("setGlobal", &LuaState::SetLuaGlobalValue),
     }
   );
@@ -133,6 +134,15 @@ Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
   std::string lua_value_path = info[0].As<Napi::String>();
 
   return ctx_.GetLuaValueLengthByPath(env, lua_value_path);
+}
+
+/**
+ * GetLuaVersion
+ */
+Napi::Value LuaState::GetLuaVersion(const Napi::CallbackInfo& info) {
+  auto env = info.Env();
+  auto version = ctx_.GetLuaVersion();
+  return Napi::String::New(env, version);
 }
 
 /**

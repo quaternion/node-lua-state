@@ -5,6 +5,7 @@ declare module "*lua-state.node" {
     eval(code: string): LuaValue | LuaValue[] | undefined;
     getGlobal(path: string): LuaValue | null | undefined;
     getLength(path: string): number | null | undefined;
+    getVersion(): string;
     setGlobal(name: string, value: LuaValue | LuaValue[]): this;
   }
 
