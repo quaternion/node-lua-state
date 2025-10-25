@@ -138,7 +138,7 @@ if (require.main === module) {
 
   const buildSourcesStr = () => {
     if (mode === "system") {
-      return LuaEnv.sources || "";
+      return "";
     }
 
     return buildLuaSource()

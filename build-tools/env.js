@@ -49,21 +49,6 @@ const LuaEnv = {
     return getEnvVariable("LUA_SOURCE_DIR");
   },
 
-  get sources() {
-    const envVar = getEnvVariable("LUA_SOURCES");
-    if (typeof envVar === "undefined") {
-      return undefined;
-    }
-
-    const isFalse = ["0", "false", "no", "n"].includes(String(envVar).trim());
-
-    if (isFalse) {
-      return "";
-    }
-
-    return envVar;
-  },
-
   get includeDirs() {
     return getEnvVariable("LUA_INCLUDE_DIRS");
   },
