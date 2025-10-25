@@ -13,7 +13,7 @@ install -d -o node -g node /home/node/lua-state
 
 # install required packages for node-gyp
 apt-get update
-apt-get install -y make g++ gcc python3
+apt-get install -y make g++ gcc python3 lua5.1-dev lua5.2-dev lua5.3-dev lua5.4-dev libluajit-5.1-dev
 
 # cleanup apt cache
 rm -rf /var/lib/apt/lists/*

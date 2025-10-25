@@ -1,45 +1,75 @@
+// Compatibility shims for Lua 5.1–5.3 and LuaJIT
+#pragma once
+
+#if __has_include(<luajit.h>)
+extern "C" {
+#include <luajit.h>
+}
+#endif
+
 extern "C" {
 #include <lauxlib.h>
 }
 
+//
+// --- Common missing constants ---
+//
 #ifndef LUA_OK
 #define LUA_OK 0
 #endif
 
-#if LUA_VERSION_NUM <= 501
-/**
- * Compatibility shim for luaL_requiref, which was added in Lua 5.2.
- * This implementation is a copy of the one in Lua 5.2.1's lauxlib.c.
- * It is only used if the Lua version is 5.1 or lower.
- */
-static void luaL_requiref_compat(lua_State* L, const char* modname, lua_CFunction openf, int glb) {
-  lua_pushcfunction(L, openf);
-  lua_pushstring(L, modname);
-  lua_call(L, 1, 1);
-
-  lua_getfield(L, LUA_GLOBALSINDEX, "package");
-  lua_getfield(L, -1, "loaded");
-  lua_pushvalue(L, -4);
-  lua_setfield(L, -2, modname);
-  lua_pop(L, 2);
-
-  if (glb) {
-    lua_pushvalue(L, -1);
-    lua_setglobal(L, modname);
-  }
-
-  lua_pop(L, 1);
-}
-
-#define luaL_requiref(L, modname, openf, glb) luaL_requiref_compat(L, modname, openf, glb)
-
+//
+// --- lua_absindex (added in Lua 5.2) ---
+//
+#if LUA_VERSION_NUM < 502
+static int lua_absindex_compat(lua_State* L, int idx) { return (idx > 0 || idx <= LUA_REGISTRYINDEX) ? idx : lua_gettop(L) + (idx) + 1; }
+#define lua_absindex(L, idx) lua_absindex_compat(L, idx)
 #endif
 
+//
+// --- luaL_getsubtable (added in Lua 5.2) ---
+//
 #if LUA_VERSION_NUM < 502
-// Simulate the behavior of lua_len in Lua 5.2 and later by using the
-// __len metamethod if it exists, and falling back to lua_objlen if it
-// does not. This is useful for writing functions that are compatible with
-// both Lua 5.1 and later versions.
+static int luaL_getsubtable_compat(lua_State* L, int idx, const char* fname) {
+  lua_getfield(L, idx, fname);
+  if (lua_istable(L, -1)) {
+    return 1; /* table already there */
+  } else {
+    lua_pop(L, 1); /* remove previous result */
+    idx = lua_absindex(L, idx);
+    lua_newtable(L);
+    lua_pushvalue(L, -1);        /* copy to be left at top */
+    lua_setfield(L, idx, fname); /* assign new table to field */
+    return 0;                    /* false, because did not find table there */
+  }
+}
+#define luaL_getsubtable(L, idx, fname) luaL_getsubtable_compat(L, idx, fname)
+#endif
+
+//
+// --- luaL_requiref (added in Lua 5.2) ---
+//
+#if LUA_VERSION_NUM < 502
+static void luaL_requiref_compat(lua_State* L, const char* modname, lua_CFunction openf, int glb) {
+  lua_pushcfunction(L, openf);
+  lua_pushstring(L, modname); /* argument to open function */
+  lua_call(L, 1, 1);          /* open module */
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_pushvalue(L, -2);         /* make copy of module (call result) */
+  lua_setfield(L, -2, modname); /* _LOADED[modname] = module */
+  lua_pop(L, 1);                /* remove _LOADED table */
+  if (glb) {
+    lua_pushvalue(L, -1);      /* copy of 'mod' */
+    lua_setglobal(L, modname); /* _G[modname] = module */
+  }
+}
+#define luaL_requiref(L, modname, openf, glb) luaL_requiref_compat(L, modname, openf, glb)
+#endif
+
+//
+// --- lua_len (added in Lua 5.2) ---
+//
+#if LUA_VERSION_NUM < 502
 static void lua_len_compat(lua_State* L, int idx) {
   lua_pushvalue(L, idx);
 
@@ -53,8 +83,13 @@ static void lua_len_compat(lua_State* L, int idx) {
   }
 }
 #define lua_len(L, idx) lua_len_compat(L, idx)
+#endif
 
-static void luaL_traceback(lua_State* L, lua_State* L1, const char* msg, int level) {
+//
+// --- luaL_traceback (added in Lua 5.2) ---
+//
+#if LUA_VERSION_NUM < 502 && !defined(LUAJIT_VERSION)
+static void luaL_traceback_compat(lua_State* L, lua_State* L1, const char* msg, int level) {
   lua_getglobal(L, "debug");
   if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
@@ -77,16 +112,18 @@ static void luaL_traceback(lua_State* L, lua_State* L1, const char* msg, int lev
   lua_pushinteger(L, level);
   lua_call(L, 2, 1);
 }
-
-#define lua_absindex(L, i) ((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : lua_gettop(L) + (i) + 1)
-
+#define luaL_traceback(L, L1, msg, level) luaL_traceback_compat(L, L1, msg, level)
 #endif
 
+//
+// --- lua_seti (added in Lua 5.3) ---
+//
 #if LUA_VERSION_NUM < 503
-inline void lua_seti(lua_State* L, int index, lua_Integer n) {
+inline void lua_seti_compat(lua_State* L, int index, lua_Integer n) {
   int abs_index = lua_absindex(L, index);
   lua_pushinteger(L, n); // push key
   lua_insert(L, -2);     // move key before value
   lua_settable(L, abs_index);
 }
+#define lua_seti(L, index, n) lua_seti_compat(L, index, n)
 #endif
