@@ -1,5 +1,5 @@
 declare module "*lua-state.node" {
-  export declare class LuaState {
+  export class LuaState {
     constructor(opts?: LuaStateOptions);
     evalFile(path: string): LuaValue | undefined;
     eval(code: string): LuaValue | undefined;
@@ -9,7 +9,7 @@ declare module "*lua-state.node" {
     setGlobal(name: string, value: LuaValue): this;
   }
 
-  export declare class LuaError extends Error {
+  export class LuaError extends Error {
     constructor(message?: string, stack?: string);
   }
 

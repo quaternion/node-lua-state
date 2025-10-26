@@ -6,6 +6,9 @@
   "license": "MIT",
   "author": "quaternion",
   "type": "commonjs",
+  "main": "./js/index.js",
+  "module": "./js/index.mjs",
+  "types": "./types/index.d.ts",
   "exports": {
     ".": {
       "require": "./js/index.js",
