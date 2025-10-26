@@ -1,7 +1,20 @@
 {
   "name": "lua-state",
   "version": "1.0.0",
-  "description": "",
+  "description": "A modern native Node.js addon that embeds Lua runtime with bidirectional JavaScript <-> Lua integration and TypeScript support.",
+  "keywords": [
+    "lua",
+    "lua-state",
+    "lua binding",
+    "nodejs addon",
+    "napi",
+    "lua integration",
+    "embed lua",
+    "luajit",
+    "javascript lua bridge",
+    "native addon",
+    "lua vm"
+  ],
   "private": true,
   "license": "MIT",
   "author": "quaternion",
