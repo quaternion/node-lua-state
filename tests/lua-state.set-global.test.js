@@ -39,9 +39,13 @@ describe(LuaState.name + "#" + LuaState.prototype.setGlobal.name, () => {
         str: "foo",
         bool: true,
         inner: { num: 2, str: "bar", bool: false },
+        array: [3, "baz", true],
       };
       luaState.setGlobal("tbl", obj);
-      deepStrictEqual(luaState.eval(`return tbl`), obj);
+      deepStrictEqual(luaState.eval(`return tbl`), {
+        ...obj,
+        array: { 1: 3, 2: "baz", 3: true },
+      });
     });
 
     it("should set the object with cyclic reference", () => {

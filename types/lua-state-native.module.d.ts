@@ -1,12 +1,12 @@
 declare module "*lua-state.node" {
   export declare class LuaState {
     constructor(opts?: LuaStateOptions);
-    evalFile(path: string): LuaValue | LuaValue[] | undefined;
-    eval(code: string): LuaValue | LuaValue[] | undefined;
+    evalFile(path: string): LuaValue | undefined;
+    eval(code: string): LuaValue | undefined;
     getGlobal(path: string): LuaValue | null | undefined;
     getLength(path: string): number | null | undefined;
     getVersion(): string;
-    setGlobal(name: string, value: LuaValue | LuaValue[]): this;
+    setGlobal(name: string, value: LuaValue): this;
   }
 
   export declare class LuaError extends Error {
@@ -30,10 +30,10 @@ declare module "*lua-state.node" {
     | "table"
     | "utf8";
 
-  export type LuaValue = LuaPrimitive | LuaTable | LuaFunction;
+  export type LuaValue = LuaPrimitive | LuaTable | LuaFunction | LuaValue[];
   export type LuaPrimitive = string | number | boolean;
   export type LuaFunction = (...args: LuaValue[]) => LuaValue | void;
   export type LuaTable = {
-    [key: string]: LuaValue;
+    [index: string]: LuaValue | undefined;
   };
 }
