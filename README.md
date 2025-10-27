@@ -14,7 +14,7 @@
 - 📦 **Rich data exchange** - pass objects, arrays, and functions both ways
 - 🧩 **Customizable standard libraries** - load only what you need
 - 🚀 **Native performance** - built with N-API for stable ABI and speed
-- ⚡ **Multiple Lua versions** - supports **5.1 → 5.4** and **LuaJIT**
+- ⚡ **Multiple Lua versions** - supports **5.1-5.4** and **LuaJIT**
 - 🔗 **Circular & nested data support** - safely serialize complex structures
 - 🎯 **TypeScript-ready** - full typings included
 - 🛡️ **Detailed error handling** - includes Lua stack traces
@@ -203,21 +203,6 @@ These variables can be used for CI/CD or custom build scripts.
 | wasmoon       | 5.4 (WASM)           | ✅         | Async/Promise       | Node/Browser compatible          |
 | node-lua      | 5.1                  | ❌         | Native (legacy NAN) | Outdated, Linux-only             |
 | **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Fast, modern, full native bridge |
-
----
-
-## 🧪 Testing
-
-```bash
-npm test
-```
-
-Requires:
-
-- Node.js ≥ 18
-- Python 3
-- C++ compiler
-- make
 
 ---
 
