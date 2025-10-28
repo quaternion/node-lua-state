@@ -97,6 +97,9 @@ The Lua VM runs in the same thread as JavaScript, providing predictable and fast
 - Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
 - Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple and consistent
 
+> **Note on Lua 5.1 / LuaJIT:**  
+> These older Lua versions have a smaller internal C stack. Running very deep or repetitive JS function calls from Lua (hundreds of thousands in a loop) may lead to a stack overflow. Newer Lua versions (≥5.1.1) handle this correctly.
+
 ---
 
 ### 🧠 Examples
