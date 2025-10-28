@@ -6,7 +6,7 @@ const {
   DirLuaSource,
 } = require("../build-tools/lua-source");
 const logger = require("../build-tools/logger");
-const { BinaryRelease, Binary } = require("../build-tools/config");
+const { NativeRelease, Binary } = require("../build-tools/config");
 const { fetchTarball } = require("../build-tools/artifact");
 
 async function install(luaVersion = LuaEnv.version) {
@@ -67,13 +67,13 @@ async function prepareBinary({ luaMode, luaVersion }) {
     return false;
   }
 
-  const binaryRelease = BinaryRelease({ luaVersion });
+  const nativeRelease = NativeRelease({ luaVersion });
 
   try {
     logger.log(
-      `Trying to download prebuilt binary for lua ${luaVersion} from ${binaryRelease.url}...`
+      `Trying to download prebuilt binary for lua ${luaVersion} from ${nativeRelease.url}...`
     );
-    await fetchTarball({ url: binaryRelease.url, destDir: Binary.dir });
+    await fetchTarball({ url: nativeRelease.url, destDir: Binary.dir });
     logger.log(`Binary downloaded.`);
     return true;
   } catch (err) {

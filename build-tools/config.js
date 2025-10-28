@@ -15,15 +15,15 @@ const Binary = {
   },
 };
 
-const BinaryRelease = ({
+const NativeRelease = ({
   luaVersion,
-  pkgVersion = pkg.version,
+  nativeVersion = pkg.nativeVersion,
   platform = process.platform,
   arch = process.arch,
   family = libc.familySync(),
 }) => {
   const familyStr = family ? `-${family}` : "";
-  const name = `lua-state-v${pkgVersion}-lua-v${luaVersion}-${platform}-${arch}${familyStr}.tar.gz`;
+  const name = `lua-state-native-v${nativeVersion}-lua-v${luaVersion}-${platform}-${arch}${familyStr}.tar.gz`;
   const url = `${Repository.url}/releases/download/${name}`;
 
   return {
@@ -47,6 +47,6 @@ const Repository = {
 
 module.exports = {
   Binary,
-  BinaryRelease,
+  NativeRelease,
   Repository,
 };

@@ -1,6 +1,7 @@
 {
   "name": "lua-state",
   "version": "1.0.0",
+  "nativeVersion": "1.0.0",
   "description": "A modern native Node.js addon that embeds Lua runtime with bidirectional JavaScript <-> Lua integration and TypeScript support.",
   "keywords": [
     "lua",
