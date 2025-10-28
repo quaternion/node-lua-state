@@ -209,6 +209,22 @@ These variables can be used for CI/CD or custom build scripts.
 
 ---
 
+## ⚡ Performance
+
+Benchmarked on Lua 5.4.8 (Ryzen 7900X, Debian Bookworm, Node.js 24):
+
+| Benchmark                | Iterations | Time (ms) |
+| ------------------------ | ---------- | --------- |
+| Lua: pure computation    | 1000000    | ≈ 3.8     |
+| JS → Lua calls           | 50000      | ≈ 4.3     |
+| Lua → JS calls           | 50000      | ≈ 6.4     |
+| JS → Lua data transfer   | 50000      | ≈ 135.0   |
+| Lua → JS data extraction | 50000      | ≈ 62.5    |
+
+> To run the benchmark locally: `npm run bench`
+
+---
+
 ## 🪪 License
 
 **MIT License** © quaternion  
