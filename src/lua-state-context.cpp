@@ -266,9 +266,7 @@ namespace {
   }
 
   Napi::Value ReadJsValueFromStack(lua_State* L, const Napi::Env& env, int lua_stack_index) {
-    if (lua_stack_index < 0) {
-      lua_stack_index = lua_gettop(L) + lua_stack_index + 1;
-    }
+    lua_stack_index = lua_absindex(L, lua_stack_index);
 
     auto root_type = lua_type(L, lua_stack_index);
     if (root_type != LUA_TTABLE) {
