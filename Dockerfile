@@ -1,4 +1,4 @@
-FROM node:24.4.1-bookworm-slim AS build
+FROM node:24.10.0-bookworm-slim AS build
 
 ENV COREPACK_NPM_REGISTRY=https://registry.npmjs.org    
 
