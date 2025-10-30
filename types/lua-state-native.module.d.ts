@@ -2,8 +2,11 @@ declare module "*lua-state.node" {
   export class LuaState {
     constructor(opts?: LuaStateOptions);
     evalFile(path: string): LuaValue | undefined;
+    evalFile<T extends LuaValue>(path: string): T;
     eval(code: string): LuaValue | undefined;
+    eval<T extends LuaValue>(code: string): T;
     getGlobal(path: string): LuaValue | null | undefined;
+    getGlobal<T extends LuaValue>(path: string): T;
     getLength(path: string): number | null | undefined;
     getVersion(): string;
     setGlobal(name: string, value: LuaValue): this;
