@@ -41,7 +41,7 @@ void LuaError::Init(Napi::Env env, Napi::Object exports) {
 
   // save js constructor as static variable
   lua_error_js_constructor_ = Napi::Persistent(lua_error_js_class);
-  lua_error_js_constructor_.SuppressDestruct();
+  env.AddCleanupHook([] { lua_error_js_constructor_.Reset(); });
 
   exports.Set("LuaError", lua_error_js_class);
 }

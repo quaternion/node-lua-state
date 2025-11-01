@@ -51,6 +51,7 @@ LuaStateContext::~LuaStateContext() {
 void LuaStateContext::Init(Napi::Env env, Napi::Object _exports) {
   auto lua_reg_symbol = Napi::Symbol::New(env, "lua_reg");
   lua_reg_symbol_ref_ = Napi::Persistent(lua_reg_symbol);
+  env.AddCleanupHook([] { lua_reg_symbol_ref_.Reset(); });
 }
 
 LuaStateContext* LuaStateContext::From(lua_State* L) {
