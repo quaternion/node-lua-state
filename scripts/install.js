@@ -33,7 +33,7 @@ async function install(luaVersion = LuaEnv.version) {
     return false;
   }
 
-  if (!runNodeGyp(["rebuild"])) {
+  if (!runNodeGyp(["rebuild", "--release"])) {
     logger.error("Built failed.");
     return false;
   }
@@ -77,6 +77,7 @@ async function prepareBinary({ luaMode, luaVersion }) {
     logger.log(`Binary downloaded.`);
     return true;
   } catch (err) {
+    logger.log(err?.message);
     return false;
   }
 }
