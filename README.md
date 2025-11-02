@@ -36,6 +36,8 @@
 npm install lua-state
 ```
 
+If prebuilt binaries are available for your platform, installation completes instantly with no compilation required. Otherwise, it will automatically build from source.
+
 > Requires Node.js **18+**, **tar** (system tool or npm package), and a valid C++ build environment (for **[node-gyp](https://github.com/nodejs/node-gyp)**) if binaries are built from source.
 
 ---
@@ -119,8 +121,8 @@ console.log(lua.eval('return "a", "b", "c"')); // ["a", "b", "c"]
 lua.eval("config = { debug = true, port = 8080 }");
 console.log(lua.getGlobal("config")); // { debug: true, port: 8080 }
 console.log(lua.getGlobal("config.port")); // 8080
-console.log(lua.getGlobal("config.missing")); // undefined if field doesn't exist
-console.log(lua.getGlobal("missing")); // null if global doesn't exists
+console.log(lua.getGlobal("config.missing")); // undefined if the field doesn't exist
+console.log(lua.getGlobal("missing")); // null if the global doesn't exist
 ```
 
 #### Call Lua Functions from JS
@@ -198,6 +200,8 @@ npx lua-state install --force --mode=system --libraries=-lluajit-5.1 --include-d
 # Rebuild with custom lua sources
 npx lua-state install --force --mode=source --source-dir=deps/lua-5.1/src
 ```
+
+> ⚠️ LuaJIT builds are only supported in `system` mode (cannot be built from source).
 
 ---
 
