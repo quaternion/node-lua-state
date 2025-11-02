@@ -151,9 +151,9 @@ if (require.main === module) {
   const flag = process.argv[2];
   if (flag === "--include-dirs") {
     process.stdout.write(buildIncludeDirsStr());
-  } else if (flag == "--sources") {
+  } else if (flag === "--sources") {
     process.stdout.write(buildSourcesStr());
-  } else if (flag == "--libraries") {
+  } else if (flag === "--libraries") {
     const librariesStr = (LuaEnv.libraries || "")
       .split(path.sep)
       .join(path.posix.sep);
