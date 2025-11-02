@@ -123,15 +123,6 @@ async function prepareOfficialLuaSources({ luaVersion }) {
 }
 
 function runNodeGyp(args = []) {
-  const isSilent =
-    process.env.npm_config_loglevel === "silent" ||
-    process.argv.includes("--silent") ||
-    process.argv.includes("--loglevel=silent");
-
-  if (isSilent) {
-    args = ["--silent", ...args];
-  }
-
   let command;
   let fullArgs;
 
