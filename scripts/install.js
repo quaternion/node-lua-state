@@ -1,4 +1,5 @@
-const { spawnSync } = require("child_process");
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
 
 const { LuaEnv, LuaStateEnv } = require("../build-tools/env");
 const {
@@ -134,6 +135,9 @@ function runNodeGyp(args = []) {
     command = "node-gyp";
     fullArgs = args;
   }
+
+  const pkgRoot = path.resolve(__dirname, "..");
+  fullArgs.push(`--directory=${pkgRoot}`);
 
   logger.log(`Running: ${command} ${fullArgs.join(" ")}`);
 
