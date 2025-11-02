@@ -115,6 +115,12 @@ module.exports = {
 if (require.main === module) {
   const mode = LuaStateEnv.mode;
 
+  const toGypRelativePath = (p) => {
+    const gypPath = path.join(__dirname, "..");
+    const relativePath = path.relative(gypPath, p);
+    return relativePath.split(path.sep).join(path.posix.sep);
+  };
+
   const buildLuaSource = () => {
     if (mode === "source") {
       return new DirLuaSource({ rootDir: LuaEnv.sourceDir });
@@ -131,11 +137,7 @@ if (require.main === module) {
       return LuaEnv.includeDirs;
     }
 
-    return buildLuaSource()
-      .includeDirs.map((includeDir) =>
-        path.posix.relative(process.cwd(), includeDir)
-      )
-      .join(" ");
+    return buildLuaSource().includeDirs.map(toGypRelativePath).join(" ");
   };
 
   const buildSourcesStr = () => {
@@ -143,9 +145,7 @@ if (require.main === module) {
       return "";
     }
 
-    return buildLuaSource()
-      .sources.map((source) => path.posix.relative(process.cwd(), source))
-      .join(" ");
+    return buildLuaSource().sources.map(toGypRelativePath).join(" ");
   };
 
   const flag = process.argv[2];
