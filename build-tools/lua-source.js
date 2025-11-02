@@ -132,7 +132,9 @@ if (require.main === module) {
     }
 
     return buildLuaSource()
-      .includeDirs.map((includeDir) => path.relative(process.cwd(), includeDir))
+      .includeDirs.map((includeDir) =>
+        path.posix.relative(process.cwd(), includeDir)
+      )
       .join(" ");
   };
 
@@ -142,7 +144,7 @@ if (require.main === module) {
     }
 
     return buildLuaSource()
-      .sources.map((source) => path.relative(process.cwd(), source))
+      .sources.map((source) => path.posix.relative(process.cwd(), source))
       .join(" ");
   };
 
@@ -152,7 +154,10 @@ if (require.main === module) {
   } else if (flag == "--sources") {
     process.stdout.write(buildSourcesStr());
   } else if (flag == "--libraries") {
-    process.stdout.write(LuaEnv.libraries || "");
+    const librariesStr = (LuaEnv.libraries || "")
+      .split(path.sep)
+      .join(path.posix.sep);
+    process.stdout.write(librariesStr);
   } else {
     logger.error(
       "Usage: node lua-source.js [--include-dirs | --sources | --libraries]"
