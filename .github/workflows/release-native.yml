@@ -13,7 +13,7 @@ env:
 jobs:
   native_info:
     name: Get Native Info
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       native_version: ${{ steps.read_package.outputs.native_version }}
       release_exists: ${{ steps.release_exists.outputs.result }}
@@ -109,7 +109,7 @@ jobs:
 
   upload_release:
     name: Upload Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - native_info
       - build_binaries
