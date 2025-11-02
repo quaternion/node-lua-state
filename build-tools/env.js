@@ -1,5 +1,6 @@
 const path = require("node:path");
 const os = require("node:os");
+const libc = require("detect-libc");
 
 const DEFAULT_LUA_MODE = "download";
 const DEFAULT_LUA_VERSION = "5.4.8";
@@ -37,6 +38,18 @@ const LuaStateEnv = {
   get forceBuild() {
     const forceBuild = getEnvVariable("LUA_STATE_FORCE_BUILD");
     return ["1", "true", "yes", "on", "y"].includes(String(forceBuild).trim());
+  },
+};
+
+const LuaBuildEnv = {
+  get platform() {
+    return process.platform;
+  },
+  get arch() {
+    return process.arch;
+  },
+  get family() {
+    return libc.familySync();
   },
 };
 
@@ -112,5 +125,6 @@ function getEnvVariable(variableName) {
 
 module.exports = {
   LuaStateEnv,
+  LuaBuildEnv,
   LuaEnv,
 };

@@ -1,0 +1,19 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release_native:
+    name: Release Native Binaries
+    uses: ./.github/workflows/release-native.yml
+
+  publish_package:
+    name: Publish Package
+    runs-on: ubuntu-22.04
+    needs: release_native
+    steps:
+      - run: |
+          echo "TODO: publish package"

@@ -1,6 +1,8 @@
 const fs = require("fs");
-const libc = require("detect-libc");
 const path = require("path");
+
+const { LuaEnv, LuaBuildEnv } = require("./env");
+const logger = require("./logger");
 const pkg = require("../package.json");
 
 const Binary = {
@@ -16,15 +18,15 @@ const Binary = {
 };
 
 const NativeRelease = ({
-  luaVersion,
+  luaVersion = LuaEnv.version,
   nativeVersion = pkg.nativeVersion,
-  platform = process.platform,
-  arch = process.arch,
-  family = libc.familySync(),
-}) => {
+  platform = LuaBuildEnv.platform,
+  arch = LuaBuildEnv.arch,
+  family = LuaBuildEnv.family,
+} = {}) => {
   const familyStr = family ? `-${family}` : "";
   const name = `lua-state-native-v${nativeVersion}-lua-v${luaVersion}-${platform}-${arch}${familyStr}.tar.gz`;
-  const url = `${Repository.url}/releases/download/${name}`;
+  const url = `${Repository.url}/releases/download/native-v${nativeVersion}/${name}`;
 
   return {
     name,
@@ -50,3 +52,13 @@ module.exports = {
   NativeRelease,
   Repository,
 };
+
+if (require.main === module) {
+  const flag = process.argv[2];
+  if (flag === "--native-release-name") {
+    process.stdout.write(NativeRelease().name);
+  } else {
+    logger.error("Usage: node config.js [--native-release-name]");
+    process.exitCode = 1;
+  }
+}

@@ -60,8 +60,7 @@
   "scripts": {
     "install": "node scripts/install.js",
     "bench": "node scripts/bench.js",
-    "pack:linux": "tar -czf lua-state-v1.0.0-napi-v8-linux-x64.tar.gz package.json prebuilds/linux-x64/",
-    "test": "node --expose-gc --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {
     "detect-libc": "^2.1.1"

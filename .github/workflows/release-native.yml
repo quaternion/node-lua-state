@@ -1,0 +1,131 @@
+name: Release Native Binaries
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+env:
+  LUA_VERSION: 5.4.8
+
+jobs:
+  native_info:
+    name: Get Native Info
+    runs-on: ubuntu-22.04
+    outputs:
+      native_version: ${{ steps.read_package.outputs.native_version }}
+      release_exists: ${{ steps.release_exists.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      - name: Read package.json
+        id: read_package
+        run: |
+          echo "native_version=$(jq -r '.nativeVersion' package.json)" >> $GITHUB_OUTPUT
+      - name: Check Release Exists
+        id: release_exists
+        uses: actions/github-script@v8
+        with:
+          result-encoding: string
+          script: |
+            try {
+              const tag = 'native-v${{ steps.read_package.outputs.native_version }}';
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+              return true;
+            } catch (error) {
+              return false;
+            }
+
+  build_binaries:
+    name: Build Native Binaries
+    runs-on: ${{ matrix.os }}
+    needs: native_info
+    if: needs.native_info.outputs.release_exists == 'false'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            setup: |
+              sudo apt update
+              sudo apt install -y make g++ gcc python3
+          - os: ubuntu-22.04-arm
+            setup: |
+              sudo apt update
+              sudo apt install -y make g++ gcc python3
+          - os: ubuntu-22.04
+            image: node:24.10.0-alpine3.22
+            setup: |
+              apk add --no-cache make g++ python3
+          - os: macos-15
+            setup: |
+              brew install python3
+          - os: windows-2025
+            setup: |
+              choco install python3 --no-progress
+    container:
+      image: ${{ matrix.image }}
+      options: ${{ matrix.options }}
+    steps:
+      - name: Setup
+        run: ${{  matrix.setup }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: 0
+      - name: Install Nodejs
+        uses: actions/setup-node@v6
+        if: ${{ ! matrix.image }}
+        with:
+          node-version: 24.10.0
+      - name: Build
+        env:
+          LUA_STATE_MODE: download
+          LUA_STATE_FORCE_BUILD: true
+        run: |
+          npm ci
+      - name: Test
+        run: |
+          npm run test
+      - name: Set Binary Name
+        run: |
+          echo "BINARY_NAME=$(node build-tools/config.js --native-release-name)" >> $GITHUB_ENV
+      - name: Archive binary
+        run: |
+          mkdir -p prebuilds          
+          tar -czf prebuilds/$BINARY_NAME -C build/Release lua-state.node
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ env.BINARY_NAME }}
+          path: prebuilds
+          if-no-files-found: error
+          retention-days: 1
+
+  upload_release:
+    name: Upload Release
+    runs-on: ubuntu-22.04
+    needs:
+      - native_info
+      - build_binaries
+    if: needs.native_info.outputs.release_exists == 'false' && needs.build_binaries.result == 'success'
+    steps:
+      - name: Download All Built Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: prebuilds
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: prebuilds/**/*.tar.gz
+          tag_name: native-v${{ needs.native_info.outputs.native_version }}
+          name: "lua-state-native-v${{ needs.native_info.outputs.native_version }}-lua-v${{ env.LUA_VERSION }}"
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          prerelease: true
