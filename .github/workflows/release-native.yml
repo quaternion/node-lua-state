@@ -53,6 +53,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
+            shell: bash
             setup: |
               sudo apt update
               sudo apt install -y make g++ gcc python3
@@ -62,14 +63,20 @@ jobs:
           #     sudo apt install -y make g++ gcc python3
           - os: ubuntu-24.04
             image: node:24.10.0-alpine3.22
+            shell: sh
             setup: |
               apk add --no-cache make g++ python3
           - os: macos-15
+            shell: bash
             setup: |
               brew install python3
           - os: windows-2025
+            shell: bash
             setup: |
               choco install python3 --no-progress
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     container:
       image: ${{ matrix.image }}
     steps:
