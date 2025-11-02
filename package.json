@@ -64,11 +64,12 @@
     "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {
-    "detect-libc": "^2.1.1"
+    "detect-libc": "^2.1.1",
+    "picomatch": "^4.0.3"
   },
   "optionalDependencies": {
     "node-addon-api": "^8.5.0",
-    "node-gyp": "^11.4.2"
+    "node-gyp": "^11.5.0"
   },
   "peerDependencies": {
     "tar": "7.x"
