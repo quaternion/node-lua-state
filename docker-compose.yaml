@@ -1,5 +1,5 @@
 services:
-  dev:
+  lua-state:
     container_name: node-lua-state
     build:
       context: .
