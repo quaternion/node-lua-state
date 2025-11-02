@@ -40,6 +40,7 @@
     "url": "git@github.com:quaternion/node-lua-state.git"
   },
   "files": [
+    "bin",
     "build-tools",
     "js",
     "scripts",
