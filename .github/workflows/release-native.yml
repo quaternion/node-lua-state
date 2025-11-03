@@ -19,8 +19,6 @@ jobs:
       release_exists: ${{ steps.release_exists.outputs.result }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-tags: true
       - name: Read package.json
         id: read_package
         run: |
