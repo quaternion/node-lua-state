@@ -84,8 +84,6 @@ jobs:
       - name: Setup
         run: ${{  matrix.setup }}
       - uses: actions/checkout@v4
-        with:
-          fetch-tags: 0
       - name: Install Nodejs
         uses: actions/setup-node@v6
         if: ${{ ! matrix.image }}
