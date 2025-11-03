@@ -17,6 +17,7 @@
     "lua vm"
   ],
   "private": true,
+  "homepage": "https://github.com/quaternion/node-lua-state#readme",
   "license": "MIT",
   "author": "quaternion",
   "type": "commonjs",
@@ -37,7 +38,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:quaternion/node-lua-state.git"
+    "url": "https://github.com/quaternion/node-lua-state.git"
   },
   "files": [
     "bin",
