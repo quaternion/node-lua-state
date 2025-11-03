@@ -16,7 +16,6 @@
     "native addon",
     "lua vm"
   ],
-  "private": true,
   "homepage": "https://github.com/quaternion/node-lua-state#readme",
   "license": "MIT",
   "author": "quaternion",

@@ -15,5 +15,12 @@ jobs:
     runs-on: ubuntu-24.04
     needs: release_native
     steps:
-      - run: |
-          echo "TODO: publish package"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.10.0
+          registry-url: https://registry.npmjs.org
+      - name: Publish Package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_GRANULAR_TOKEN }}

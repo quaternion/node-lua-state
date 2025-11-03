@@ -103,7 +103,7 @@ jobs:
       - name: Set Binary Name
         run: |
           echo "BINARY_NAME=$(node build-tools/config.js --native-release-name)" >> $GITHUB_ENV
-      - name: Archive binary
+      - name: Archive Binary
         run: |
           mkdir -p prebuilds          
           tar -czf prebuilds/$BINARY_NAME -C build/Release lua-state.node
