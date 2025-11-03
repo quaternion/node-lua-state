@@ -40,6 +40,14 @@ If prebuilt binaries are available for your platform, installation completes ins
 
 > Requires Node.js **18+**, **tar** (system tool or npm package), and a valid C++ build environment (for **[node-gyp](https://github.com/nodejs/node-gyp)**) if binaries are built from source.
 
+> **Tip:** To reduce install size, you can skip optional build dependencies if you only use prebuilt binaries:
+>
+> ```bash
+> npm install lua-state --no-optional
+> ```
+>
+> This omits `node-gyp` and `node-addon-api`, which are only needed when compiling Lua from source.
+
 ---
 
 ## ⚡ Quick Example
