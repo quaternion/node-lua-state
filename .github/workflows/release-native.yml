@@ -57,10 +57,10 @@ jobs:
             setup: |
               sudo apt update
               sudo apt install -y make g++ gcc python3
-          # - os: ubuntu-24.04-arm
-          #   setup: |
-          #     sudo apt update
-          #     sudo apt install -y make g++ gcc python3
+          - os: ubuntu-24.04-arm
+            setup: |
+              sudo apt update
+              sudo apt install -y make g++ gcc python3
           - os: ubuntu-24.04
             image: node:24.10.0-alpine3.22
             shell: sh
