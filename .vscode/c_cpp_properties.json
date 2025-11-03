@@ -1,16 +1,13 @@
 {
-    "configurations": [
-        {
-            "name": "Linux",
-            "includePath": [
-                "/usr/local/include/**",
-                "${workspaceFolder}/**"
-            ],
-            "defines": [],
-            "cStandard": "c17",
-            "cppStandard": "gnu++17",
-            "intelliSenseMode": "${default}"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": ["/usr/local/include/**", "${workspaceFolder}/**"],
+      "defines": [],
+      "cStandard": "c17",
+      "cppStandard": "gnu++17",
+      "intelliSenseMode": "${default}"
+    }
+  ],
+  "version": 4
 }

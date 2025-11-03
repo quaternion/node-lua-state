@@ -33,7 +33,7 @@
   // Configure tool-specific properties.
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools", "esbenp.prettier-vscode"],
+      "extensions": ["biomejs.biome", "ms-vscode.cpptools"],
       "settings": {
         "files.watchUsingPolling": true,
         "files.watchPollingInterval": 1000,

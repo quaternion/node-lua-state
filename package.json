@@ -59,8 +59,10 @@
     "lua-state": "./bin/lua-state.js"
   },
   "scripts": {
-    "install": "node scripts/install.js",
+    "format": "biome format --write .",
     "bench": "node scripts/bench.js",
+    "install": "node scripts/install.js",
+    "lint": "biome check .",
     "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {
@@ -73,5 +75,8 @@
   },
   "peerDependencies": {
     "tar": "7.x"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.2"
   }
 }

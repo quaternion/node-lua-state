@@ -1,2 +1,2 @@
-import "./lua-state-native.module";
-export * from "lua-state.node";
+import './lua-state-native.module'
+export * from 'lua-state.node'

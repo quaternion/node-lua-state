@@ -1,59 +1,59 @@
-const { spawnSync } = require("node:child_process");
-const { mkdirSync } = require("node:fs");
+const { spawnSync } = require('node:child_process')
+const { mkdirSync } = require('node:fs')
 
 async function extractTar({ archivePath, destDir }) {
-  const strategy = getTarStrategy();
+  const strategy = getTarStrategy()
 
   if (!strategy) {
-    throw new Error(`tar not found in packages or system`);
+    throw new Error(`tar not found in packages or system`)
   }
 
-  mkdirSync(destDir, { recursive: true });
+  mkdirSync(destDir, { recursive: true })
 
-  if (strategy === "package") {
-    const tar = await require("tar");
+  if (strategy === 'package') {
+    const tar = await require('tar')
     await tar.x({
       file: archivePath,
       cwd: destDir,
-    });
+    })
   } else {
     const extractTarCmd = spawnSync(
-      "tar",
-      ["-xzf", archivePath, "-C", destDir],
-      { stdio: "inherit" }
-    );
+      'tar',
+      ['-xzf', archivePath, '-C', destDir],
+      { stdio: 'inherit' },
+    )
 
     if (extractTarCmd.status !== 0) {
-      throw new Error(`${archivePath} failed extract to ${destDir}`);
+      throw new Error(`${archivePath} failed extract to ${destDir}`)
     }
   }
 }
 
 function getTarStrategy() {
   if (hasTarPackage()) {
-    return "package";
+    return 'package'
   } else if (hasSystemTar()) {
-    return "system";
+    return 'system'
   } else {
-    return null;
+    return null
   }
 }
 
 function hasTarPackage() {
   try {
-    require.resolve("tar");
-    return true;
+    require.resolve('tar')
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
 function hasSystemTar() {
-  const cmd = process.platform === "win32" ? "where" : "which";
-  const result = spawnSync(cmd, ["tar"], { stdio: "ignore" });
-  return result.status === 0;
+  const cmd = process.platform === 'win32' ? 'where' : 'which'
+  const result = spawnSync(cmd, ['tar'], { stdio: 'ignore' })
+  return result.status === 0
 }
 
 module.exports = {
   extractTar,
-};
+}

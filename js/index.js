@@ -1,1 +1,1 @@
-module.exports = require("../build/Release/lua-state.node");
+module.exports = require('../build/Release/lua-state.node')
