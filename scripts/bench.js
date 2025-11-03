@@ -14,7 +14,6 @@ function bench(label, fn, count = 1_000_000) {
 }
 
 // 1. Pure Lua computation
-// biome-ignore format: blocks
 {
   const lua = new LuaState()
 
