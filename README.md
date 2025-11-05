@@ -1,6 +1,7 @@
-# lua-state
+# lua-state - Native Lua & LuaJIT bindings for Node.js
 
-> 🧠 A modern native Node.js addon that embeds the Lua runtime, enabling seamless two-way integration between JavaScript and Lua.
+lua-state brings real Lua (5.1-5.4) and LuaJIT into Node.js using native N-API bindings.
+You can create Lua VMs, execute Lua code, share values between JavaScript and Lua, and even install prebuilt binaries (Lua 5.4.8) - no compiler required.
 
 [![npm](https://img.shields.io/npm/v/lua-state.svg)](https://www.npmjs.com/package/lua-state)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
@@ -8,17 +9,27 @@
 
 ---
 
-## ✨ Features
+## ✨ Why lua-state?
+
+- Real Lua runtime (no WebAssembly or transpilation)
+- Supports Lua 5.1–5.4 and LuaJIT
+- Prebuilt Lua 5.4.8 binaries for most platforms
+- Built-in CLI to rebuild Lua or switch versions easily
+- Full TypeScript support
+
+---
+
+## ⚙️ Features
 
 - 🔄 **Bidirectional integration** - call Lua from JS and JS from Lua
 - 📦 **Rich data exchange** - pass objects, arrays, and functions both ways
 - 🧩 **Customizable standard libraries** - load only what you need
 - 🚀 **Native performance** - built with N-API for stable ABI and speed
-- ⚡ **Multiple Lua versions** - supports **Lua 5.1 → 5.4** and **LuaJIT**
+- ⚡ **Multiple Lua versions** - supports Lua 5.1–5.4 and LuaJIT (prebuilt 5.4.8 included)
 - 🔗 **Circular & nested data support** - safely serialize complex structures
 - 🎯 **TypeScript-ready** - full typings included
 - 🛡️ **Detailed error handling** - includes Lua stack traces
-- 🧰 **Unix-friendly** - tested on Debian/Ubuntu; other platforms should work with a compatible build setup
+- 🧰 **Cross-platform ready** - prebuilt binaries tested on Linux (glibc/musl), macOS (arm64), and Windows (x64)
 
 ---
 
@@ -36,6 +47,7 @@
 npm install lua-state
 ```
 
+Prebuilt binaries are currently available for Lua 5.4.8 and downloaded automatically from [GitHub Releases](https://github.com/quaternion/node-lua-state/releases).
 If prebuilt binaries are available for your platform, installation completes instantly with no compilation required. Otherwise, it will automatically build from source.
 
 > Requires Node.js **18+**, **tar** (system tool or npm package), and a valid C++ build environment (for **[node-gyp](https://github.com/nodejs/node-gyp)**) if binaries are built from source.
@@ -51,6 +63,8 @@ If prebuilt binaries are available for your platform, installation completes ins
 ---
 
 ## ⚡ Quick Example
+
+Here’s a quick example: run Lua code and read back values directly from JavaScript
 
 ```js
 const { LuaState } = require("lua-state");
@@ -114,11 +128,19 @@ The Lua VM runs in the same thread as JavaScript, providing predictable and fast
 
 ### 🧠 Examples
 
+```js
+const lua = new LuaState();
+```
+
+#### Get Current Lua Version
+
+```js
+console.log(lua.getVersion()); // "Lua 5.4.8"
+```
+
 #### Evaluate Lua Code
 
 ```js
-const lua = new LuaState();
-
 console.log(lua.eval("return 2 + 2")); // 4
 console.log(lua.eval('return "a", "b", "c"')); // ["a", "b", "c"]
 ```
@@ -156,6 +178,18 @@ const info = lua.eval('return user.name .. " (" .. user.age .. ")"');
 console.log(info); // "Alice (30)"
 ```
 
+#### Evaluate Lua File
+
+```lua
+-- example.lua
+return "Hello from Lua file"
+```
+
+```js
+const result = lua.evalFile("example.lua");
+console.log(result); // "Hello from Lua file"
+```
+
 ---
 
 ## 🧩 TypeScript Support
@@ -176,7 +210,7 @@ const numberValue = lua.eval<number>("return 42"); // number
 
 ## 🧰 Building from Source
 
-The package includes a CLI tool for managing Lua builds:
+If you need to rebuild with a different Lua version or use your system Lua installation, you can do it with the included CLI tool:
 
 ```bash
 npx lua-state install [options]
@@ -230,13 +264,14 @@ These variables can be used for CI/CD or custom build scripts.
 
 ## 🔍 Compared to other bindings
 
-| Package       | Lua versions         | TypeScript | API Style           | Notes                            |
-| ------------- | -------------------- | ---------- | ------------------- | -------------------------------- |
-| fengari       | 5.2 (WASM)           | ❌         | Pure JS             | Browser-oriented, slower         |
-| lua-in-js     | 5.3 (JS interpreter) | ✅         | Pure JS             | No native performance            |
-| wasmoon       | 5.4 (WASM)           | ✅         | Async/Promise       | Node/Browser compatible          |
-| node-lua      | 5.1                  | ❌         | Native (legacy NAN) | Outdated, Linux-only             |
-| **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Fast, modern, full native bridge |
+| Package       | Lua versions         | TypeScript | API Style           | Notes                                        |
+| ------------- | -------------------- | ---------- | ------------------- | -------------------------------------------- |
+| fengari       | 5.2 (WASM)           | ❌         | Pure JS             | Browser-oriented, slower                     |
+| lua-in-js     | 5.3 (JS interpreter) | ✅         | Pure JS             | No native performance                        |
+| wasmoon       | 5.4 (WASM)           | ✅         | Async/Promise       | Node/Browser compatible                      |
+| node-lua      | 5.1                  | ❌         | Native (legacy NAN) | Outdated, Linux-only                         |
+| lua-native    | 5.4 (N-API)          | ✅         | Native N-API        | Active project, no multi-version support     |
+| **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Multi-version, prebuilt binaries, modern API |
 
 ---
 
@@ -253,6 +288,13 @@ Benchmarked on Lua 5.4.8 (Ryzen 7900X, Debian Bookworm, Node.js 24):
 | Lua → JS data extraction | 50,000     | ≈ 62.5    |
 
 > To run the benchmark locally: `npm run bench`
+
+---
+
+## 🧪 Quality Assurance
+
+Each native binary is built and tested automatically before release.  
+The test suite runs JavaScript integration tests to ensure stable behavior across supported systems.
 
 ---
 
