@@ -1,3 +1,7 @@
 {
-  "recommendations": ["biomejs.biome", "ms-vscode.cpptools"]
+  "recommendations": [
+    "biomejs.biome",
+    "esbenp.prettier-vscode",
+    "ms-vscode.cpptools"
+  ]
 }
