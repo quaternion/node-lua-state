@@ -101,7 +101,7 @@ Available libraries:
 ## 🕒 Execution Model
 
 All Lua operations in `lua-state` are **synchronous** by design.  
-The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution.
+The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution.  
 For asynchronous I/O, consider isolating Lua VMs in worker threads.
 
 - `await` is **not required** and not supported - calls like `lua.eval()` block until completion
