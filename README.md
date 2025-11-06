@@ -26,7 +26,7 @@ You can create Lua VMs, execute Lua code, share values between JavaScript and Lu
 - 🧩 **Customizable standard libraries** - load only what you need
 - 🚀 **Native performance** - built with N-API for stable ABI and speed
 - ⚡ **Multiple Lua versions** - supports Lua 5.1–5.4 and LuaJIT (prebuilt 5.4.8 included)
-- 🔗 **Circular & nested data support** - safely serialize complex structures
+- 🔗 **Circular & nested data support** - handles deeply nested and circular JS objects safely
 - 🎯 **TypeScript-ready** - full typings included
 - 🛡️ **Detailed error handling** - includes Lua stack traces
 - 🧰 **Cross-platform ready** - prebuilt binaries tested on Linux (glibc/musl), macOS (arm64), and Windows (x64)
@@ -116,13 +116,13 @@ Available libraries:
 
 All Lua operations in `lua-state` are **synchronous** by design.  
 The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution.
+For asynchronous I/O, consider isolating Lua VMs in worker threads.
 
 - `await` is **not required** and not supported - calls like `lua.eval()` block until completion
 - Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
 - Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
 
-> **Note on Lua 5.1 / LuaJIT:**  
-> These older Lua versions have a smaller internal C stack. Running very deep or repetitive JS function calls from Lua (hundreds of thousands in a loop) may lead to a stack overflow. Newer Lua versions (≥5.1.1) handle this correctly.
+> ⚠️ **Note**: Lua 5.1 and LuaJIT (older Lua versions) have a smaller internal C stack. Running very deep or repetitive JS function calls from Lua (hundreds of thousands in a loop) may lead to a stack overflow. Newer Lua versions (≥5.1.1) handle this correctly.
 
 ---
 
@@ -192,6 +192,41 @@ console.log(result); // "Hello from Lua file"
 
 ---
 
+## 🔄 Type Mapping (JS ⇄ Lua)
+
+When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are supported internally and won’t cause infinite recursion.
+
+### JavaScript → Lua
+
+| JavaScript Type | Becomes in Lua | Notes                                                                       |
+| --------------- | -------------- | --------------------------------------------------------------------------- |
+| `string`        | `string`       | UTF-8 encoded                                                               |
+| `number`        | `number`       | 64-bit double precision                                                     |
+| `boolean`       | `boolean`      |                                                                             |
+| `Date`\*        | `number`       | Milliseconds since Unix epoch                                               |
+| `undefined`     | `nil`          |                                                                             |
+| `null`          | `nil`          |                                                                             |
+| `Function`      | `function`     | Callable from Lua                                                           |
+| `Object`        | `table`        | Recursively copies enumerable fields. Non-enumerable properties are ignored |
+| `Array`\*       | `table`        | Indexed from 1 in Lua                                                       |
+
+### Lua → JavaScript
+
+| Lua Type   | Becomes in JavaScript | Notes                               |
+| ---------- | --------------------- | ----------------------------------- |
+| `string`   | `string`              | UTF-8 encoded                       |
+| `number`   | `number`              | 64-bit double precision             |
+| `boolean`  | `boolean`             |                                     |
+| `nil`      | `null`                |                                     |
+| `table`    | `object`              | Converts to plain JavaScript object |
+| `function` | `function`            | Callable from JS                    |
+
+> ⚠️ **Note:** Conversion is not always symmetrical - for example,  
+> a JS `Date` becomes a number in Lua, but that number won’t automatically  
+> convert back into a `Date` when returned to JS.
+
+---
+
 ## 🧩 TypeScript Support
 
 This package provides full type definitions for all APIs.  
@@ -243,7 +278,7 @@ npx lua-state install --force --mode=system --libraries=-lluajit-5.1 --include-d
 npx lua-state install --force --mode=source --source-dir=deps/lua-5.1/src
 ```
 
-> ⚠️ LuaJIT builds are only supported in `system` mode (cannot be built from source).
+> ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).
 
 ---
 
