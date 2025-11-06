@@ -24,6 +24,11 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
       luaState.setGlobal('bool', true)
       strictEqual(luaState.eval(`return bool`), true)
     })
+
+    it('should set the date', () => {
+      luaState.setGlobal('date', new Date(1762420772318))
+      strictEqual(luaState.eval('return date'), 1762420772318)
+    })
   })
 
   describe('with object', () => {

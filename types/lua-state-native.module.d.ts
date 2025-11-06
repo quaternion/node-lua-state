@@ -34,7 +34,7 @@ declare module '*lua-state.node' {
     | 'utf8'
 
   export type LuaValue = LuaPrimitive | LuaTable | LuaFunction | LuaValue[]
-  export type LuaPrimitive = string | number | boolean
+  export type LuaPrimitive = string | number | boolean | Date
   export type LuaFunction = (...args: LuaValue[]) => LuaValue | undefined
   export type LuaTable = {
     [index: string]: LuaValue | undefined

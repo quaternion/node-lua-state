@@ -374,6 +374,12 @@ namespace {
       return;
     }
 
+    if (value.IsDate()) {
+      double ms = value.As<Napi::Date>().ValueOf();
+      lua_pushnumber(L, ms);
+      return;
+    }
+
     std::vector<Napi::Object> queue;
     std::vector<Napi::Object> visited;
     Napi::Symbol lua_reg_symbol = lua_reg_symbol_ref_.Value();
