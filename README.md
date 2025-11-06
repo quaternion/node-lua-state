@@ -7,8 +7,6 @@ You can create Lua VMs, execute Lua code, share values between JavaScript and Lu
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
-
 ## ✨ Why lua-state?
 
 - Real Lua runtime (no WebAssembly or transpilation)
@@ -16,8 +14,6 @@ You can create Lua VMs, execute Lua code, share values between JavaScript and Lu
 - Prebuilt Lua 5.4.8 binaries for most platforms
 - Built-in CLI to rebuild Lua or switch versions easily
 - Full TypeScript support
-
----
 
 ## ⚙️ Features
 
@@ -31,15 +27,11 @@ You can create Lua VMs, execute Lua code, share values between JavaScript and Lu
 - 🛡️ **Detailed error handling** - includes Lua stack traces
 - 🧰 **Cross-platform ready** - prebuilt binaries tested on Linux (glibc/musl), macOS (arm64), and Windows (x64)
 
----
-
 ## 💡 Use Cases
 
 - Embedding Lua scripting in Node.js applications
 - Running existing Lua codebases from JS
 - Exposing JS APIs to Lua scripts
-
----
 
 ## 📦 Installation
 
@@ -60,8 +52,6 @@ If prebuilt binaries are available for your platform, installation completes ins
 >
 > This omits `node-gyp` and `node-addon-api`, which are only needed when compiling Lua from source.
 
----
-
 ## ⚡ Quick Example
 
 Here’s a quick example: run Lua code and read back values directly from JavaScript
@@ -75,8 +65,6 @@ lua.setGlobal("name", "World");
 const result = lua.eval('return "Hello, " .. name');
 console.log(result); // → "Hello, World"
 ```
-
----
 
 ## 🧩 API Overview
 
@@ -110,8 +98,6 @@ Available libraries:
 | `getLength(path)`        | `number \| null \| undefined`   | Get length of Lua table or array (dot notation) |
 | `getVersion()`           | `string`                        | Get Lua version string                          |
 
----
-
 ## 🕒 Execution Model
 
 All Lua operations in `lua-state` are **synchronous** by design.  
@@ -123,8 +109,6 @@ For asynchronous I/O, consider isolating Lua VMs in worker threads.
 - Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
 
 > ⚠️ **Note**: Lua 5.1 and LuaJIT (older Lua versions) have a smaller internal C stack. Running very deep or repetitive JS function calls from Lua (hundreds of thousands in a loop) may lead to a stack overflow. Newer Lua versions (≥5.1.1) handle this correctly.
-
----
 
 ### 🧠 Examples
 
@@ -190,8 +174,6 @@ const result = lua.evalFile("example.lua");
 console.log(result); // "Hello from Lua file"
 ```
 
----
-
 ## 🔄 Type Mapping (JS ⇄ Lua)
 
 When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are supported internally and won’t cause infinite recursion.
@@ -226,8 +208,6 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 > a JS `Date` becomes a number in Lua, but that number won’t automatically  
 > convert back into a `Date` when returned to JS.
 
----
-
 ## 🧩 TypeScript Support
 
 This package provides full type definitions for all APIs.  
@@ -241,8 +221,6 @@ const lua = new LuaState();
 const anyValue = lua.eval("return { x = 1 }"); // LuaValue | undefined
 const numberValue = lua.eval<number>("return 42"); // number
 ```
-
----
 
 ## 🧰 Building from Source
 
@@ -281,8 +259,6 @@ npx lua-state install --force --mode=source --source-dir=deps/lua-5.1/src
 
 > ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).
 
----
-
 ## 🌍 Environment Variables
 
 These variables can be used for CI/CD or custom build scripts.
@@ -296,8 +272,6 @@ These variables can be used for CI/CD or custom build scripts.
 | `LUA_INCLUDE_DIRS`      | Include directories (for `system` mode)     | -          |
 | `LUA_LIBRARIES`         | Library paths (for `system` mode)           | -          |
 
----
-
 ## 🔍 Compared to other bindings
 
 | Package       | Lua versions         | TypeScript | API Style           | Notes                                        |
@@ -308,8 +282,6 @@ These variables can be used for CI/CD or custom build scripts.
 | node-lua      | 5.1                  | ❌         | Native (legacy NAN) | Outdated, Linux-only                         |
 | lua-native    | 5.4 (N-API)          | ✅         | Native N-API        | Active project, no multi-version support     |
 | **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Multi-version, prebuilt binaries, modern API |
-
----
 
 ## ⚡ Performance
 
@@ -325,14 +297,10 @@ Benchmarked on Lua 5.4.8 (Ryzen 7900X, Debian Bookworm, Node.js 24):
 
 > To run the benchmark locally: `npm run bench`
 
----
-
 ## 🧪 Quality Assurance
 
 Each native binary is built and tested automatically before release.  
 The test suite runs JavaScript integration tests to ensure stable behavior across supported systems.
-
----
 
 ## 🪪 License
 
