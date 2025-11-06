@@ -464,7 +464,7 @@ namespace {
     switch (value_type) {
       case napi_string: {
         std::string str = value.As<Napi::String>().Utf8Value();
-        lua_pushstring(L, str.c_str());
+        lua_pushlstring(L, str.c_str(), str.size());
         break;
       }
       case napi_number:
@@ -472,7 +472,7 @@ namespace {
         break;
       case napi_bigint: {
         std::string str = value.As<Napi::BigInt>().ToString();
-        lua_pushstring(L, str.c_str());
+        lua_pushlstring(L, str.c_str(), str.size());
         break;
       }
       case napi_boolean:
