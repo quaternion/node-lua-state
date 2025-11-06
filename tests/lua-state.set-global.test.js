@@ -10,24 +10,30 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
   })
 
   describe('with primitive', () => {
-    it('should set the number', () => {
-      luaState.setGlobal('num', 1)
-      strictEqual(luaState.eval(`return num`), 1)
-    })
-
-    it('should set the string', () => {
+    it('should set String', () => {
       luaState.setGlobal('str', 'foo')
       strictEqual(luaState.eval(`return str`), 'foo')
     })
 
-    it('should set the boolean', () => {
+    it('should set Number', () => {
+      luaState.setGlobal('num', 1)
+      strictEqual(luaState.eval(`return num`), 1)
+    })
+
+    it('should set BigInt', () => {
+      luaState.setGlobal('bigInt', BigInt('123456'))
+      strictEqual(luaState.eval('return bigInt'), '123456')
+    })
+
+    it('should set Boolean', () => {
       luaState.setGlobal('bool', true)
       strictEqual(luaState.eval(`return bool`), true)
     })
 
-    it('should set the date', () => {
-      luaState.setGlobal('date', new Date(1762420772318))
-      strictEqual(luaState.eval('return date'), 1762420772318)
+    it('should set Date', () => {
+      const date = new Date()
+      luaState.setGlobal('date', date)
+      strictEqual(luaState.eval('return date'), date.valueOf())
     })
   })
 

@@ -209,6 +209,7 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 | `Function`      | `function`     | Callable from Lua                                                           |
 | `Object`        | `table`        | Recursively copies enumerable fields. Non-enumerable properties are ignored |
 | `Array`\*       | `table`        | Indexed from 1 in Lua                                                       |
+| `BigInt`\*      | `string`       |                                                                             |
 
 ### Lua → JavaScript
 
