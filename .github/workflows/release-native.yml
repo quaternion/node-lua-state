@@ -13,7 +13,7 @@ env:
 jobs:
   native_info:
     name: Get Native Info
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       native_version: ${{ steps.read_package.outputs.native_version }}
       release_exists: ${{ steps.release_exists.outputs.result }}
@@ -50,17 +50,17 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             shell: bash
             setup: |
               sudo apt update
               sudo apt install -y make g++ gcc python3
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             shell: bash
             setup: |
               sudo apt update
               sudo apt install -y make g++ gcc python3
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             image: node:24.10.0-alpine3.22
             shell: sh
             setup: |
@@ -113,7 +113,7 @@ jobs:
 
   upload_release:
     name: Upload Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - native_info
       - build_binaries

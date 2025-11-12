@@ -16,7 +16,7 @@ jobs:
 
   publish_package:
     name: Publish Package
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: release_native
     steps:
       - uses: actions/checkout@v4
