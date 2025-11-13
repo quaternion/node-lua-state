@@ -2,6 +2,12 @@ name: Release Native Binaries
 
 on:
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: Force rebuild and overwrite existing release
+        required: false
+        default: false
+        type: boolean
   workflow_call:
 
 permissions:
@@ -15,8 +21,8 @@ jobs:
     name: Get Native Info
     runs-on: ubuntu-22.04
     outputs:
-      native_version: ${{ steps.read_package.outputs.native_version }}
-      release_exists: ${{ steps.release_exists.outputs.result }}
+      native_version: ${{ steps.read_package.outputs.native_version }}      
+      should_build: ${{ steps.set_should_build.outputs.result }}
     steps:
       - uses: actions/checkout@v4
       - name: Read package.json
@@ -26,11 +32,13 @@ jobs:
       - name: Check Release Exists
         id: release_exists
         uses: actions/github-script@v8
+        env:
+          NATIVE_VERSION: ${{ steps.read_package.outputs.native_version }}
         with:
           result-encoding: string
           script: |
             try {
-              const tag = 'native-v${{ steps.read_package.outputs.native_version }}';
+              const tag = `native-v${process.env.NATIVE_VERSION}`;
               const release = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -40,12 +48,22 @@ jobs:
             } catch (error) {
               return false;
             }
+      - name: Decide if should build
+        id: set_should_build
+        run: |
+          if [ "${{ inputs.force_rebuild }}" = "true" ]; then
+            echo "result=true" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.release_exists.outputs.result }}" = "false" ]; then
+            echo "result=true" >> $GITHUB_OUTPUT
+          else
+            echo "result=false" >> $GITHUB_OUTPUT
+          fi
 
   build_binaries:
     name: Build Native Binaries
     runs-on: ${{ matrix.os }}
     needs: native_info
-    if: needs.native_info.outputs.release_exists == 'false'
+    if: needs.native_info.outputs.should_build == 'true'
     strategy:
       fail-fast: true
       matrix:
@@ -80,7 +98,7 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - name: Setup
-        run: ${{  matrix.setup }}
+        run: ${{ matrix.setup }}
       - uses: actions/checkout@v4
       - name: Install Nodejs
         uses: actions/setup-node@v6
@@ -120,7 +138,7 @@ jobs:
     needs:
       - native_info
       - build_binaries
-    if: needs.native_info.outputs.release_exists == 'false' && needs.build_binaries.result == 'success'
+    if: needs.native_info.outputs.should_build == 'true' && needs.build_binaries.result == 'success'
     steps:
       - name: Download All Built Artifacts
         uses: actions/download-artifact@v4
@@ -133,5 +151,6 @@ jobs:
           tag_name: native-v${{ needs.native_info.outputs.native_version }}
           name: "lua-state-native-v${{ needs.native_info.outputs.native_version }}-lua-v${{ env.LUA_VERSION }}"
           generate_release_notes: true
+          overwrite_files: true
           fail_on_unmatched_files: true
           prerelease: true
