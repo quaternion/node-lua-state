@@ -1,60 +1,36 @@
 # lua-state - Native Lua & LuaJIT bindings for Node.js
 
-lua-state brings real Lua (5.1-5.4) and LuaJIT into Node.js using native N-API bindings.
-You can create Lua VMs, execute Lua code, share values between JavaScript and Lua, and even install prebuilt binaries (Lua 5.4.8) - no compiler required.
+Embed real Lua (5.1-5.4) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required with prebuilt binaries.
 
 [![npm](https://img.shields.io/npm/v/lua-state.svg)](https://www.npmjs.com/package/lua-state)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## ✨ Why lua-state?
-
-- Real Lua runtime (no WebAssembly or transpilation)
-- Supports Lua 5.1–5.4 and LuaJIT
-- Prebuilt Lua 5.4.8 binaries for most platforms
-- Built-in CLI to rebuild Lua or switch versions easily
-- Full TypeScript support
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#basic-usage">Usage</a> •
+  <a href="#api-reference">API</a> •
+  <a href="#type-mapping-js--lua">Type Mapping</a> •
+  <a href="#cli">CLI</a> •  
+  <a href="#performance">Performance</a>
+</p>
 
 ## ⚙️ Features
 
-- 🔄 **Bidirectional integration** - call Lua from JS and JS from Lua
-- 📦 **Rich data exchange** - pass objects, arrays, and functions both ways
-- 🧩 **Customizable standard libraries** - load only what you need
-- 🚀 **Native performance** - built with N-API for stable ABI and speed
-- ⚡ **Multiple Lua versions** - supports Lua 5.1–5.4 and LuaJIT (prebuilt 5.4.8 included)
-- 🔗 **Circular & nested data support** - handles deeply nested and circular JS objects safely
-- 🎯 **TypeScript-ready** - full typings included
-- 🛡️ **Detailed error handling** - includes Lua stack traces
-- 🧰 **Cross-platform ready** - prebuilt binaries tested on Linux (glibc/musl), macOS (arm64), and Windows (x64)
+- ⚡ **Multiple Lua versions** - Supports Lua 5.1–5.4 and LuaJIT
+- 🧰 **Prebuilt Binaries** - Lua 5.4.8 included for Linux/macOS/Windows
+- 🔄 **Bidirectional integration** - Call Lua from JS and JS from Lua
+- 📦 **Rich data exchange** - Objects, arrays, functions in both directions
+- 🎯 **TypeScript-ready** - Full type definitions included
+- 🚀 **Native performance** - N-API bindings, no WebAssembly overhead
 
-## 💡 Use Cases
-
-- Embedding Lua scripting in Node.js applications
-- Running existing Lua codebases from JS
-- Exposing JS APIs to Lua scripts
-
-## 📦 Installation
+## ⚡ Quick Start
 
 ```bash
 npm install lua-state
 ```
-
-Prebuilt binaries are currently available for Lua 5.4.8 and downloaded automatically from [GitHub Releases](https://github.com/quaternion/node-lua-state/releases).
-If prebuilt binaries are available for your platform, installation completes instantly with no compilation required. Otherwise, it will automatically build from source.
-
-> Requires Node.js **18+**, **tar** (system tool or npm package), and a valid C++ build environment (for **[node-gyp](https://github.com/nodejs/node-gyp)**) if binaries are built from source.
-
-> **Tip:** To reduce install size, you can skip optional build dependencies if you only use prebuilt binaries:
->
-> ```bash
-> npm install lua-state --no-optional
-> ```
->
-> This omits `node-gyp` and `node-addon-api`, which are only needed when compiling Lua from source.
-
-## ⚡ Quick Example
-
-Here’s a quick example: run Lua code and read back values directly from JavaScript
 
 ```js
 const { LuaState } = require("lua-state");
@@ -66,113 +42,115 @@ const result = lua.eval('return "Hello, " .. name');
 console.log(result); // → "Hello, World"
 ```
 
-## 🧩 API Overview
+## 📦 Installation
 
-### `class LuaState`
+Prebuilt binaries are currently available for Lua 5.4.8 and downloaded automatically from [GitHub Releases](https://github.com/quaternion/node-lua-state/releases).
+If a prebuilt binary is available for your platform, installation is instant - no compilation required. Otherwise, it will automatically build from source.
 
-Represents an independent Lua VM instance.
+> Requires Node.js **18+**, **tar** (system tool or npm package), and a valid C++ build environment (for **[node-gyp](https://github.com/nodejs/node-gyp)**) if binaries are built from source.
 
-#### Constructor
+> **Tip:** if you only use prebuilt binaries you can reduce install size with `npm install lua-state --no-optional`.
 
-```ts
-new LuaState(options?: LuaStateOptions)
-```
-
-**Options:**
-
-| Option | Type               | Description                                                    |
-| ------ | ------------------ | -------------------------------------------------------------- |
-| `libs` | `string[] \| null` | Lua libraries to load (default: all). Use `null` to load none. |
-
-Available libraries:  
-`"base"`, `"bit32"`, `"coroutine"`, `"debug"`, `"io"`, `"math"`, `"os"`, `"package"`, `"string"`, `"table"`, `"utf8"`
-
-#### Methods
-
-| Method                   | Returns                         | Description                                     |
-| ------------------------ | ------------------------------- | ----------------------------------------------- |
-| `eval(code)`             | `LuaValue`                      | Execute Lua code string                         |
-| `evalFile(path)`         | `LuaValue`                      | Run a Lua file                                  |
-| `setGlobal(name, value)` | `this`                          | Set global Lua variable                         |
-| `getGlobal(path)`        | `LuaValue \| null \| undefined` | Get global value (dot notation)                 |
-| `getLength(path)`        | `number \| null \| undefined`   | Get length of Lua table or array (dot notation) |
-| `getVersion()`           | `string`                        | Get Lua version string                          |
-
-## 🕒 Execution Model
-
-All Lua operations in `lua-state` are **synchronous** by design.  
-The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution.  
-For asynchronous I/O, consider isolating Lua VMs in worker threads.
-
-- `await` is **not required** and not supported - calls like `lua.eval()` block until completion
-- Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
-- Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
-
-> ⚠️ **Note**: Lua 5.1 and LuaJIT (older Lua versions) have a smaller internal C stack. Running very deep or repetitive JS function calls from Lua (hundreds of thousands in a loop) may lead to a stack overflow. Newer Lua versions (≥5.1.1) handle this correctly.
-
-### 🧠 Examples
+## 🧠 Basic Usage
 
 ```js
 const lua = new LuaState();
 ```
 
-#### Get Current Lua Version
+**Get Current Lua Version**
 
 ```js
 console.log(lua.getVersion()); // "Lua 5.4.8"
 ```
 
-#### Evaluate Lua Code
+**Evaluate Lua Code**
 
 ```js
 console.log(lua.eval("return 2 + 2")); // 4
 console.log(lua.eval('return "a", "b", "c"')); // ["a", "b", "c"]
 ```
 
-#### Interact with Globals
+**Share Variables**
 
 ```js
+// JS → Lua
+lua.setGlobal("user", { name: "Alice", age: 30 });
+
+// Lua → JS
 lua.eval("config = { debug = true, port = 8080 }");
 console.log(lua.getGlobal("config")); // { debug: true, port: 8080 }
 console.log(lua.getGlobal("config.port")); // 8080
-console.log(lua.getGlobal("config.missing")); // undefined if the field doesn't exist
-console.log(lua.getGlobal("missing")); // null if the global doesn't exist
+console.log(lua.getGlobal("config.missing")); // undefined - path exists but field is missing
+console.log(lua.getGlobal("missing")); // null - global variable does not exist at all
 ```
 
-#### Call Lua Functions from JS
+**Call Functions Both Ways**
 
 ```js
+// Call Lua from JS
 lua.eval("function add(a, b) return a + b end");
 const add = lua.getGlobal("add");
 console.log(add(5, 7)); // 12
-```
 
-#### Call JS Functions from Lua
-
-```js
+// Call JS from Lua
 lua.setGlobal("add", (a, b) => a + b);
-console.log(lua.eval("return add(5, 3)")); // 8
+console.log(lua.eval("return add(3, 4)")); // 12
 ```
 
-#### Pass Complex JS Objects
+**Get Table Length**
 
 ```js
-lua.setGlobal("user", { name: "Alice", age: 30 });
-const info = lua.eval('return user.name .. " (" .. user.age .. ")"');
-console.log(info); // "Alice (30)"
+lua.eval("items = { 1, 2, 3 }");
+console.log(lua.getLength("items")); // 3
 ```
 
-#### Evaluate Lua File
+**File Execution**
 
 ```lua
--- example.lua
-return "Hello from Lua file"
+-- config.lua
+return {
+  title = "My App",
+  features = { "auth", "api", "db" }
+}
 ```
 
 ```js
-const result = lua.evalFile("example.lua");
-console.log(result); // "Hello from Lua file"
+const config = lua.evalFile("config.lua");
+console.log(config.title); // "My App"
 ```
+
+## 🕒 Execution Model
+
+All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution. For asynchronous I/O, consider isolating Lua VMs in worker threads.
+
+- `await` is **not required** and not supported - calls like `lua.eval()` block until completion
+- Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
+- Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
+
+> ⚠️ **Note**: Lua 5.1 and LuaJIT have a small internal C stack, which may cause stack overflows when calling JS functions in very deep loops. Lua 5.1.1+ uses a larger stack and does not have this limitation.
+
+## 🧩 API Reference
+
+### `LuaState` Class
+
+```ts
+new LuaState(options?: {
+  libs?: string[] | null // Libraries to load, use null or empty array to load none (default: all)
+})
+```
+
+**Available libraries:** `base`, `bit32`, `coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table`, `utf8`
+
+**Core Methods**
+
+| Method                   | Description         | Returns                         |
+| ------------------------ | ------------------- | ------------------------------- |
+| `eval(code)`             | Execute Lua code    | `LuaValue`                      |
+| `evalFile(path)`         | Run Lua file        | `LuaValue`                      |
+| `setGlobal(name, value)` | Set global variable | `this`                          |
+| `getGlobal(path)`        | Get global value    | `LuaValue \| null \| undefined` |
+| `getLength(path)`        | Get length of table | `number \| null \| undefined`   |
+| `getVersion()`           | Get Lua version     | `string`                        |
 
 ## 🔄 Type Mapping (JS ⇄ Lua)
 
@@ -185,13 +163,13 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 | `string`        | `string`       | UTF-8 encoded                                                               |
 | `number`        | `number`       | 64-bit double precision                                                     |
 | `boolean`       | `boolean`      |                                                                             |
-| `Date`\*        | `number`       | Milliseconds since Unix epoch                                               |
+| `Date`          | `number`       | Milliseconds since Unix epoch                                               |
 | `undefined`     | `nil`          |                                                                             |
 | `null`          | `nil`          |                                                                             |
 | `Function`      | `function`     | Callable from Lua                                                           |
 | `Object`        | `table`        | Recursively copies enumerable fields. Non-enumerable properties are ignored |
-| `Array`\*       | `table`        | Indexed from 1 in Lua                                                       |
-| `BigInt`\*      | `string`       |                                                                             |
+| `Array`         | `table`        | Indexed from 1 in Lua                                                       |
+| `BigInt`        | `string`       |                                                                             |
 
 ### Lua → JavaScript
 
@@ -222,8 +200,10 @@ const anyValue = lua.eval("return { x = 1 }"); // LuaValue | undefined
 const numberValue = lua.eval<number>("return 42"); // number
 ```
 
-## 🧰 Building from Source
+## 🧰 CLI
 
+<details>
+<summary><strong><code>install</code></strong></summary>
 If you need to rebuild with a different Lua version or use your system Lua installation, you can do it with the included CLI tool:
 
 ```bash
@@ -236,9 +216,9 @@ The build system is based on node-gyp and supports flexible integration with exi
 
 | Option                                          | Description                               | Default    |
 | ----------------------------------------------- | ----------------------------------------- | ---------- |
-| `--mode`                                        | `download`, `source`, or `system`         | `download` |
-| `--force`                                       | Force rebuild                             | `false`    |
-| `--version`                                     | Lua version for `download` build          | `5.4.8`    |
+| `-m, --mode`                                    | `download`, `source`, or `system`         | `download` |
+| `-f, --force`                                   | Force rebuild                             | `false`    |
+| `-v, --version`                                 | Lua version for `download` build          | `5.4.8`    |
 | `--source-dir`, `--include-dirs`, `--libraries` | Custom paths for `source`/`system` builds | -          |
 
 **Examples:**
@@ -250,7 +230,7 @@ npx lua-state install --force --version=5.2.4
 # Rebuild with system Lua
 npx lua-state install --force --mode=system --libraries=-llua5.4 --include-dirs=/usr/include/lua5.4
 
-# Rebuild with system or prebuilded LuaJIT
+# Rebuild with system or prebuilt LuaJIT
 npx lua-state install --force --mode=system --libraries=-lluajit-5.1 --include-dirs=/usr/include/luajit-2.1
 
 # Rebuild with custom lua sources
@@ -258,6 +238,46 @@ npx lua-state install --force --mode=source --source-dir=deps/lua-5.1/src
 ```
 
 > ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).
+
+</details>
+
+<details>
+<summary><strong><code>run</code></strong></summary>
+
+Run a Lua script file or code string with the CLI tool:
+
+```bash
+npx lua-state run [file]
+```
+
+**Options:**
+
+| Option                  | Description                             | Default |
+| ----------------------- | --------------------------------------- | ------- |
+| `-c, --code <code>`     | Lua code to run as string               | -       |
+| `--json`                | Output result as JSON                   | `false` |
+| `-s, --sandbox [level]` | Run in sandbox mode (`light`, `strict`) | -       |
+
+**Examples:**
+
+```bash
+# Run a Lua file
+npx lua-state run script.lua
+
+# Run Lua code from string
+npx lua-state run --code "print('Hello, World!')"
+
+# Run and output result as JSON
+npx lua-state run --code "return { name = 'Alice', age = 30 }" --json
+
+# Run in sandbox mode (light restrictions)
+npx lua-state run --sandbox light script.lua
+
+# Run in strict sandbox mode (heavy restrictions)
+npx lua-state run --sandbox strict script.lua
+```
+
+</details>
 
 ## 🌍 Environment Variables
 
