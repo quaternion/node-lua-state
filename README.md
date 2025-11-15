@@ -12,12 +12,12 @@ Embed real Lua (5.1-5.4) and LuaJIT in Node.js with native N-API bindings. Creat
   <a href="#installation">Installation</a> •
   <a href="#basic-usage">Usage</a> •
   <a href="#api-reference">API</a> •
-  <a href="#type-mapping">Type Mapping</a> •
+  <a href="#type-mapping">Mapping</a> •
   <a href="#cli">CLI</a> •
   <a href="#performance">Performance</a>
 </p>
 
-## ⚙️ [Features](#features)
+## ⚙️ Features <a id="features"></a>
 
 - ⚡ **Multiple Lua versions** - Supports Lua 5.1–5.4 and LuaJIT
 - 🧰 **Prebuilt Binaries** - Lua 5.4.8 included for Linux/macOS/Windows
@@ -26,7 +26,7 @@ Embed real Lua (5.1-5.4) and LuaJIT in Node.js with native N-API bindings. Creat
 - 🎯 **TypeScript-ready** - Full type definitions included
 - 🚀 **Native performance** - N-API bindings, no WebAssembly overhead
 
-## ⚡ [Quick Start](#quick-start)
+## ⚡ Quick Start <a id="quick-start"></a>
 
 ```bash
 npm install lua-state
@@ -42,7 +42,7 @@ const result = lua.eval('return "Hello, " .. name');
 console.log(result); // → "Hello, World"
 ```
 
-## 📦 [Installation](#installation)
+## 📦 Installation <a id="installation"></a>
 
 Prebuilt binaries are currently available for Lua 5.4.8 and downloaded automatically from [GitHub Releases](https://github.com/quaternion/node-lua-state/releases).
 If a prebuilt binary is available for your platform, installation is instant - no compilation required. Otherwise, it will automatically build from source.
@@ -51,7 +51,7 @@ If a prebuilt binary is available for your platform, installation is instant - n
 
 > **Tip:** if you only use prebuilt binaries you can reduce install size with `npm install lua-state --no-optional`.
 
-## 🧠 [Basic Usage](#basic-usage)
+## 🧠 Basic Usage <a id="basic-usage"></a>
 
 ```js
 const lua = new LuaState();
@@ -129,7 +129,7 @@ All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs
 
 > ⚠️ **Note**: Lua 5.1 and LuaJIT have a small internal C stack, which may cause stack overflows when calling JS functions in very deep loops. Lua 5.1.1+ uses a larger stack and does not have this limitation.
 
-## 🧩 [API Reference](#api-reference)
+## 🧩 API Reference <a id="api-reference"></a>
 
 ### `LuaState` Class
 
@@ -152,7 +152,7 @@ new LuaState(options?: {
 | `getLength(path)`        | Get length of table | `number \| null \| undefined`   |
 | `getVersion()`           | Get Lua version     | `string`                        |
 
-## 🔄 [Type Mapping (JS ⇄ Lua)](#type-mapping)
+## 🔄 Type Mapping (JS ⇄ Lua) <a id="type-mapping"></a>
 
 When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are supported internally and won’t cause infinite recursion.
 
@@ -200,7 +200,7 @@ const anyValue = lua.eval("return { x = 1 }"); // LuaValue | undefined
 const numberValue = lua.eval<number>("return 42"); // number
 ```
 
-## 🧰 [CLI](#cli)
+## 🧰 CLI <a id="cli"></a>
 
 <details>
 <summary><strong><code>install</code></strong></summary>
@@ -303,7 +303,7 @@ These variables can be used for CI/CD or custom build scripts.
 | lua-native    | 5.4 (N-API)          | ✅         | Native N-API        | Active project, no multi-version support     |
 | **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Multi-version, prebuilt binaries, modern API |
 
-## ⚡ [Performance](#performance)
+## ⚡ Performance <a id="performance"></a>
 
 Benchmarked on Lua 5.4.8 (Ryzen 7900X, Debian Bookworm, Node.js 24):
 
