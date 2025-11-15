@@ -5,6 +5,23 @@ Both npm package versions (`packageVersion`) and native binary versions (`native
 
 ---
 
+## [1.1.1 / native 1.1.0]
+
+### Added
+
+- Add **run** bin command
+
+### Changed
+
+- Refactor lua-state bin command with commander package
+- Refactor README
+
+### Fixed
+
+- Add "null" to LuaPrimitive and replace return "undefined" to "void" in LuaFunction
+
+---
+
 ## [1.1.0 / native 1.1.0]
 
 ### Added
