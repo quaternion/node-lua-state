@@ -133,5 +133,13 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
         'should returns result',
       )
     })
+
+    it('should set function with multiple returns', () => {
+      luaState.setGlobal('func', () => {
+        return [1, 'foo']
+      })
+      luaState.eval(`r1, r2 = func()`)
+      deepStrictEqual(luaState.eval(`return { r1, r2 }`), { 1: 1, 2: 'foo' })
+    })
   })
 })

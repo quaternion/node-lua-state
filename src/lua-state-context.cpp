@@ -617,6 +617,7 @@ namespace {
     int top_index = lua_gettop(L);
 
     std::vector<napi_value> js_args;
+    js_args.reserve(top_index - 1);
     for (int i = 2; i <= top_index; ++i) {
       auto js_arg = ReadJsValueFromStack(L, env, i);
       js_args.push_back(js_arg);
@@ -625,9 +626,18 @@ namespace {
     // call js function
     Napi::Value js_function_result = js_function_holder->ref->Call(js_args);
 
-    PushJsValueToStack(L, js_function_result);
-
-    return 1;
+    if (js_function_result.IsArray()) {
+      Napi::Array js_function_results = js_function_result.As<Napi::Array>();
+      uint32_t js_function_results_length = js_function_results.Length();
+      for (uint32_t i = 0; i < js_function_results_length; ++i) {
+        Napi::Value result = js_function_results.Get(i);
+        PushJsValueToStack(L, result);
+      }
+      return js_function_results_length;
+    } else {
+      PushJsValueToStack(L, js_function_result);
+      return 1;
+    }
   }
 
   int GcJsFunctionLuaCallback(lua_State* L) {
