@@ -95,6 +95,22 @@ console.log(add(5, 7)); // 12
 // Call JS from Lua
 lua.setGlobal("add", (a, b) => a + b);
 console.log(lua.eval("return add(3, 4)")); // 12
+
+// JS function with multiple returns
+lua.setGlobal("getUser", () => ["Alice", 30]);
+lua.eval("name, age = getUser()");
+console.log(lua.getGlobal("name")); // "Alice"
+console.log(lua.getGlobal("age")); // 30
+
+// JS function that throws an error
+lua.setGlobal("throwError", () => {
+  throw new Error("Something went wrong");
+});
+const result = lua.eval(`
+  local ok, err = pcall(throwError);
+  return { ok, err }
+`);
+console.log(result); // { 1: false, 2: "Error: Something went wrong" }
 ```
 
 **Get Table Length**
