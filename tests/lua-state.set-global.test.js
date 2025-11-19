@@ -109,7 +109,7 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
   })
 
   describe('with function', () => {
-    it('should set the function', () => {
+    it('should set function', () => {
       const func = mock.fn((num, str, bool, tbl) => {
         return { args: { num, str, bool, tbl } }
       })
@@ -140,6 +140,18 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
       })
       luaState.eval(`r1, r2 = func()`)
       deepStrictEqual(luaState.eval(`return { r1, r2 }`), { 1: 1, 2: 'foo' })
+    })
+
+    it('should set function with exception', () => {
+      const err = new Error('hello world')
+      luaState.setGlobal('throw', () => {
+        throw err
+      })
+      const res = luaState.eval(`
+        local ok, err = pcall(throw)
+        return { ok, err }
+      `)
+      deepStrictEqual(res, { 1: false, 2: `${err.name}: ${err.message}` })
     })
   })
 })

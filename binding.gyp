@@ -22,17 +22,11 @@
         "<@(lua_libraries)"
       ],
       "dependencies": [
-        "<!(node -p \"require('node-addon-api').targets\"):node_addon_api"
+        "<!(node -p \"require('node-addon-api').targets\"):node_addon_api_except"
       ],
       "defines": [ 
         "NAPI_VERSION=8",
         "NDEBUG"
-      ],
-      "cflags!": [ 
-        "-fno-exceptions" 
-      ],
-      "cflags_cc!": [ 
-        "-fno-exceptions" 
       ],
       "cflags+": [
         "-flto",
@@ -41,6 +35,7 @@
         "-fvisibility=hidden"
       ],
       "cflags_cc+": [
+        "-fexceptions",
         "-flto",
         "-fdata-sections",
         "-ffunction-sections",
