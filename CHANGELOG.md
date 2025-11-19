@@ -5,6 +5,19 @@ Both npm package versions (`packageVersion`) and native binary versions (`native
 
 ---
 
+## [1.1.2 / native 1.1.1]
+
+### Added
+
+- Support for multiple return values from JS functions
+- Error handling when calling JS functions from Lua
+
+### Changed
+
+- Updated README with examples for JS function calls and error handling
+
+---
+
 ## [1.1.1 / native 1.1.0]
 
 ### Added
