@@ -2,7 +2,7 @@ const path = require('node:path')
 const os = require('node:os')
 const libc = require('detect-libc')
 
-const DEFAULT_LUA_MODE = 'download'
+const DEFAULT_LUA_STATE_MODE = 'download'
 const DEFAULT_LUA_VERSION = '5.4.8'
 
 const LuaStateEnv = {
@@ -12,7 +12,7 @@ const LuaStateEnv = {
       return explicitMode
     }
 
-    // Infer mode from other environment variables when LUA_MODE is not provided
+    // Infer mode from other environment variables when LUA_STATE_MODE is not provided
     if (this.sourceDir) {
       return 'source'
     }
@@ -21,7 +21,7 @@ const LuaStateEnv = {
       return 'system'
     }
 
-    return DEFAULT_LUA_MODE
+    return DEFAULT_LUA_STATE_MODE
   },
   get downloadDir() {
     const cacheDir =
@@ -78,7 +78,7 @@ const LuaEnv = {
 
     if (!allowedModes.has(mode)) {
       errors.push(
-        `LUA_MODE must be one of: download, source, system (got: ${mode})`,
+        `LUA_STATE_MODE must be one of: download, source, system (got: "${mode}")`,
       )
     }
 
