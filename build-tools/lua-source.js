@@ -7,8 +7,8 @@ const { LuaEnv, LuaStateEnv } = require('./env')
 
 class DirLuaSource {
   constructor({ rootDir, srcDir = undefined }) {
-    this.rootDir = path.resolve(rootDir)
-    this.srcDir = srcDir || this.rootDir
+    this.rootDir = rootDir
+    this.srcDir = srcDir || rootDir
   }
 
   get isPresent() {

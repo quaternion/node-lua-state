@@ -24,11 +24,20 @@ program
     '-v, --version <version>',
     'Lua version to install in download mode (e.g. 5.4.8)',
   )
-  .option('--download-dir <path>', 'Directory to store downloaded sources')
-  .option('--source-dir <path>', 'Path to local Lua source for manual builds')
+  .option(
+    '--download-dir <path>',
+    'Directory to store downloaded sources',
+    resolvePath,
+  )
+  .option(
+    '--source-dir <path>',
+    'Path to local Lua source for manual builds',
+    resolvePath,
+  )
   .option(
     '--include-dirs <paths>',
     'Include directories for system Lua (space-separated)',
+    resolvePath,
   )
   .option(
     '--libraries <libs>',
@@ -176,3 +185,10 @@ program
 program.showHelpAfterError('(use --help for available commands)')
 program.showSuggestionAfterError()
 program.parse(process.argv)
+
+function resolvePath(pathStr) {
+  if (!pathStr) {
+    return pathStr
+  }
+  return path.resolve(pathStr)
+}
