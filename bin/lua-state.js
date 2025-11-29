@@ -39,10 +39,10 @@ program
     const optionsToEnvMap = {
       mode: 'LUA_STATE_MODE',
       force: 'LUA_STATE_FORCE_BUILD',
-      'download-dir': 'LUA_STATE_DOWNLOAD_DIR',
+      downloadDir: 'LUA_STATE_DOWNLOAD_DIR',
       version: 'LUA_VERSION',
-      'source-dir': 'LUA_SOURCE_DIR',
-      'include-dirs': 'LUA_INCLUDE_DIRS',
+      sourceDir: 'LUA_SOURCE_DIR',
+      includeDirs: 'LUA_INCLUDE_DIRS',
       libraries: 'LUA_LIBRARIES',
     }
 
