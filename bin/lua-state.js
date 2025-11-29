@@ -6,7 +6,6 @@ const path = require('node:path')
 
 const logger = require('../build-tools/logger')
 const pkg = require('../package.json')
-const { LuaState, LuaError } = require('../js/index')
 
 const program = new Command()
 
@@ -96,6 +95,8 @@ program
       )
       process.exit(1)
     }
+
+    const { LuaState, LuaError } = require('../js/index')
 
     const sandboxLevel = options.sandbox === true ? 'light' : options.sandbox
 
