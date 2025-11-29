@@ -93,6 +93,8 @@ function prepareCustomLuaSources() {
     return false
   }
 
+  logger.log(`Found Lua sources at ${luaSource.srcDir}`)
+
   return true
 }
 
