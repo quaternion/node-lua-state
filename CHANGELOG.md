@@ -5,6 +5,16 @@ Both npm package versions (`packageVersion`) and native binary versions (`native
 
 ---
 
+## [1.1.3 / native 1.1.1]
+
+### Fixed
+
+- Resolve relative paths in CLI install
+- Fix error on install cli-command when binary is not found
+- Fix wrong options keys in CLI install
+
+---
+
 ## [1.1.2 / native 1.1.1]
 
 ### Added
