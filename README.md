@@ -35,12 +35,25 @@ npm install lua-state
 ```js
 const { LuaState } = require("lua-state");
 
+// Create a real Lua VM inside Node.js
 const lua = new LuaState();
 
-lua.setGlobal("name", "World");
-const result = lua.eval('return "Hello, " .. name');
-console.log(result); // → "Hello, World"
+// Expose a JS function to Lua
+lua.setGlobal("getUser", () => ["Alice", 30]);
+
+// Run Lua code that calls JS and returns values back to JS
+const result = lua.eval(`
+  local name, age = getUser()
+  return {
+    greeting = "Hello, " .. name,
+    nextAge = age + 1
+  }
+`);
+
+console.log(result); // { greeting: "Hello, Alice", nextAge: 31 }
 ```
+
+Lua runs synchronously in the same thread as Node.js - no promises, no async bridge, no WASM.
 
 ## 📦 Installation <a id="installation"></a>
 
