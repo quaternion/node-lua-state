@@ -49,7 +49,7 @@ describe(`${LuaState.name}#${LuaState.prototype.eval.name}`, () => {
 
   describe('with errors', () => {
     describe('with syntax error', () => {
-      it('should throws an LuaError on syntax error', () => {
+      it('should throws an LuaError', () => {
         throws(
           () => luaState.eval(`return 1+`),
           (luaError) => {
@@ -63,7 +63,7 @@ describe(`${LuaState.name}#${LuaState.prototype.eval.name}`, () => {
       })
     })
 
-    describe('with raise errors', () => {
+    describe('with custom errors', () => {
       describe('with string body', () => {
         it('should throws an LuaError', () => {
           throws(

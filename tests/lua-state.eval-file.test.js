@@ -1,5 +1,11 @@
 const { beforeEach, describe, it } = require('node:test')
-const { deepStrictEqual, strictEqual, throws } = require('node:assert/strict')
+const {
+  deepStrictEqual,
+  strictEqual,
+  ok,
+  throws,
+  match,
+} = require('node:assert/strict')
 const { LuaError, LuaState } = require('../js')
 
 describe(`${LuaState.name}#${LuaState.prototype.evalFile.name}`, () => {
@@ -42,10 +48,31 @@ describe(`${LuaState.name}#${LuaState.prototype.evalFile.name}`, () => {
   })
 
   describe('with syntax error', () => {
-    it('throws on syntax error', () => {
+    it('should throws an LuaError', () => {
       throws(
-        () => luaState.evalFile('test/fixtures/syntax_error.lua'),
-        LuaError,
+        () => luaState.evalFile(`${__dirname}/fixtures/syntax-error.lua`),
+        (luaError) => {
+          ok(luaError instanceof LuaError, 'is LuaError instance')
+          ok(luaError.message, 'has message')
+          ok(typeof luaError.stack === 'undefined', 'stack is undefined')
+          ok(typeof luaError.cause === 'undefined', 'cause is undefined')
+          return true
+        },
+      )
+    })
+  })
+
+  describe('with custom error', () => {
+    it('should throws an LuaError', () => {
+      throws(
+        () => luaState.evalFile(`${__dirname}/fixtures/custom-error.lua`),
+        (luaError) => {
+          ok(luaError instanceof LuaError, 'is LuaError instance')
+          match(luaError.message, /foo/, 'message contains passed string')
+          ok(typeof luaError.cause === 'undefined', 'cause is undefined')
+          match(luaError.stack, /^LuaError: /, 'stack starts with "LuaError: "')
+          return true
+        },
       )
     })
   })
