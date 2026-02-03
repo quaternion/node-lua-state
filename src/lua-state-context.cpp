@@ -14,6 +14,10 @@ extern "C" {
 #include <lualib.h>
 }
 
+#ifdef DEBUG
+static void dumpLuaStack(lua_State*, const std::string&);
+#endif
+
 namespace {
 
   enum class PushLuaValueByPathToStackStatus { NotFound, BrokenPath, Found };
@@ -687,9 +691,10 @@ namespace {
 
 #ifdef DEBUG
 #include <iostream>
-static void dumpLuaStack(lua_State* L) {
+static void dumpLuaStack(lua_State* L, const std::string& title) {
   int top_index = lua_gettop(L);
-  std::cout << "Lua stack (size = " << top_index << "):\n";
+
+  std::cout << title << " stack (size = " << top_index << "):\n";
 
   for (int i = 1; i <= top_index; ++i) {
     auto type = lua_type(L, i);
