@@ -1,56 +1,76 @@
 #include "lua-error.h"
 
 /**
- * napi initializer
+ * Napi Initializer
  */
 void LuaError::Init(Napi::Env env, Napi::Object exports) {
-  Napi::Function lua_error_js_class = Napi::Function::New(
-    env,
-    [](const Napi::CallbackInfo& info) {
-      std::string message = info.Length() > 0 ? info[0].As<Napi::String>().Utf8Value() : "";
-      std::string stack = info.Length() > 1 ? info[1].As<Napi::String>().Utf8Value() : "";
-
-      Napi::Object self = info.This().As<Napi::Object>();
-
-      self.Set("name", "LuaError");
-      self.Set("message", message);
-
-      std::string formattedStack;
-
-      if (!stack.empty()) {
-        formattedStack = "LuaError" + (!message.empty() ? ": " + message : "");
-        formattedStack += "\n" + stack;
-      }
-      self.Set("stack", formattedStack);
-
-      return self;
-    },
-    "LuaError"
-  );
+  auto lua_error_class = DefineClass(env, "LuaError", {});
 
   auto global = env.Global();
+  auto error_class = global.Get("Error").As<Napi::Function>();
 
-  // set ptototypes
-  Napi::Function set_prototype_of = global.Get("Object").ToObject().Get("setPrototypeOf").As<Napi::Function>();
-  Napi::Function error_js_class = global.Get("Error").As<Napi::Function>();
+  auto set_proto = global.Get("Object").As<Napi::Object>().Get("setPrototypeOf").As<Napi::Function>();
 
-  set_prototype_of.Call({lua_error_js_class, error_js_class});
-  set_prototype_of.Call({lua_error_js_class.Get("prototype"), error_js_class.Get("prototype")});
+  set_proto.Call({lua_error_class, error_class});
+  set_proto.Call({lua_error_class.Get("prototype"), error_class.Get("prototype")});
 
-  lua_error_js_class.Get("prototype").As<Napi::Object>().Set("constructor", lua_error_js_class);
+  constructor_ = Napi::Persistent(lua_error_class);
+  constructor_.SuppressDestruct();
 
-  // save js constructor as static variable
-  lua_error_js_constructor_ = Napi::Persistent(lua_error_js_class);
-  env.AddCleanupHook([] { lua_error_js_constructor_.Reset(); });
-
-  exports.Set("LuaError", lua_error_js_class);
+  exports.Set("LuaError", lua_error_class);
 }
 
 /**
- * factory
+ * Constructor
  */
-Napi::Error LuaError::New(const Napi::Env& env, const std::string& message, const std::string& stack) {
-  Napi::Object lua_error_js_instance = lua_error_js_constructor_.New({Napi::String::New(env, message), Napi::String::New(env, stack)});
+LuaError::LuaError(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaError>(info) {
+  Napi::Env env = info.Env();
 
-  return Napi::Error(env, lua_error_js_instance);
+  Napi::String message = info.Length() > 0 ? info[0].As<Napi::String>() : Napi::String::New(env, "");
+
+  Napi::Object self = info.This().As<Napi::Object>();
+
+  self.Set("name", "LuaError");
+  self.Set("message", message);
+
+  if (info.Length() > 1 && info[1].IsObject()) {
+    Napi::Object options = info[1].As<Napi::Object>();
+
+    auto cause = options.Get("cause");
+    if (!cause.IsUndefined()) {
+      self.Set("cause", cause);
+    }
+  }
+}
+
+/**
+ * Factory
+ */
+Napi::Error LuaError::New(Napi::Env env, const Napi::Object& lua_error) {
+  auto message_val = lua_error.Get("message");
+  auto cause_val = lua_error.Get("cause");
+  auto stack_val = lua_error.Get("stack");
+
+  auto message = message_val.IsString() ? message_val.As<Napi::String>() : message_val.IsUndefined() ? Napi::String::New(env, "") : message_val.ToString();
+
+  Napi::Object options = Napi::Object::New(env);
+  if (!cause_val.IsUndefined()) {
+    options.Set("cause", cause_val);
+  }
+
+  Napi::Object instance = constructor_.New({message, options});
+
+  if (stack_val.IsString()) {
+    std::string msg = message.Utf8Value();
+    std::string header = "LuaError:";
+    if (!msg.empty()) {
+      header += " " + msg;
+    }
+
+    std::string stack = header + "\n    " + stack_val.ToString().Utf8Value();
+
+    instance.Set("stack", stack);
+  }
+
+  return Napi::Error(env, instance);
 }

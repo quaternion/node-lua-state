@@ -1,5 +1,11 @@
 const { beforeEach, describe, it } = require('node:test')
-const { deepStrictEqual, strictEqual, throws } = require('node:assert/strict')
+const {
+  deepStrictEqual,
+  strictEqual,
+  throws,
+  ok,
+  match,
+} = require('node:assert/strict')
 const { LuaState, LuaError } = require('../js')
 
 describe(`${LuaState.name}#${LuaState.prototype.eval.name}`, () => {
@@ -41,9 +47,60 @@ describe(`${LuaState.name}#${LuaState.prototype.eval.name}`, () => {
     })
   })
 
-  describe('with syntax error', () => {
-    it('throws on syntax error', () => {
-      throws(() => luaState.eval(`return 1+`), LuaError)
+  describe('with errors', () => {
+    describe('with syntax error', () => {
+      it('should throws an LuaError on syntax error', () => {
+        throws(
+          () => luaState.eval(`return 1+`),
+          (luaError) => {
+            ok(luaError instanceof LuaError, 'is LuaError instance')
+            ok(luaError.message, 'has message')
+            ok(typeof luaError.stack === 'undefined', 'stack is undefined')
+            ok(typeof luaError.cause === 'undefined', 'cause is undefined')
+            return true
+          },
+        )
+      })
+    })
+
+    describe('with raise errors', () => {
+      describe('with string body', () => {
+        it('should throws an LuaError', () => {
+          throws(
+            () => luaState.eval(`error("foo")`),
+            (luaError) => {
+              ok(luaError instanceof LuaError, 'is LuaError instance')
+              match(luaError.message, /foo/, 'message contains passed string')
+              ok(typeof luaError.cause === 'undefined', 'cause is undefined')
+              match(
+                luaError.stack,
+                /^LuaError: /,
+                'stack starts with "LuaError: "',
+              )
+              return true
+            },
+          )
+        })
+      })
+
+      describe('with table body', () => {
+        it('should throws an LuaError', () => {
+          throws(
+            () => luaState.eval(`error({ foo = "bar" })`),
+            (luaError) => {
+              ok(luaError instanceof LuaError, 'is LuaError instance')
+              strictEqual(luaError.message, '', 'is empty message')
+              deepStrictEqual(luaError.cause, { foo: 'bar' }, 'is cause table')
+              match(
+                luaError.stack,
+                /^LuaError:\n/,
+                'stack starts with "LuaError:\n"',
+              )
+              return true
+            },
+          )
+        })
+      })
     })
   })
 })

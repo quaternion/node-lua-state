@@ -4,9 +4,11 @@
 
 class LuaError : public Napi::ObjectWrap<LuaError> {
 public:
-  static void Init(Napi::Env env, Napi::Object exports);
-  static Napi::Error New(const Napi::Env&, const std::string&, const std::string& = "");
+  static void Init(Napi::Env, Napi::Object);
+  static Napi::Error New(Napi::Env, const Napi::Object&);
+
+  LuaError(const Napi::CallbackInfo&);
 
 private:
-  static inline Napi::FunctionReference lua_error_js_constructor_;
+  static inline Napi::FunctionReference constructor_;
 };

@@ -12,9 +12,7 @@ declare module '*lua-state.node' {
     setGlobal(name: string, value: LuaValue): this
   }
 
-  export class LuaError extends Error {
-    constructor(message?: string, stack?: string)
-  }
+  export class LuaError extends Error {}
 
   export type LuaStateOptions = Partial<{
     libs: LuaLibName[] | null

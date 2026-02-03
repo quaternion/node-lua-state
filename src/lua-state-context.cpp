@@ -551,23 +551,20 @@ namespace {
   }
 
   Napi::Error PopErrorFromStack(lua_State* L, const Napi::Env& env) {
-    const char* lua_message = lua_tostring(L, -1);
+    auto value = ReadJsValueFromStack(L, env, -1);
+
     lua_pop(L, 1);
 
-    std::string raw_message = lua_message ? lua_message : "Unknown Lua error";
+    Napi::Object error;
 
-    std::string message, trace;
-    auto end_of_line_pos = raw_message.find('\n');
-
-    if (end_of_line_pos != std::string::npos) {
-      message = raw_message.substr(0, end_of_line_pos);
-      trace = raw_message.substr(end_of_line_pos + 1);
+    if (value.IsObject() && (value.As<Napi::Object>().Has("message") || value.As<Napi::Object>().Has("cause"))) {
+      error = value.As<Napi::Object>();
     } else {
-      message = raw_message;
-      trace = "";
+      error = Napi::Object::New(env);
+      error.Set("message", value.ToString());
     }
 
-    return LuaError::New(env, message, trace);
+    return LuaError::New(env, error);
   }
 
   /**
@@ -669,12 +666,20 @@ namespace {
   }
 
   int TracebackLuaCallback(lua_State* L) {
-    const char* message = lua_tostring(L, 1);
-    if (!message) {
-      message = "Unknown Lua error";
+    lua_createtable(L, 2, 2);
+    auto table_index = lua_absindex(L, -1);
+
+    lua_pushvalue(L, -2);
+
+    if (lua_type(L, -1) == LUA_TTABLE) {
+      lua_setfield(L, table_index, "cause");
+    } else {
+      lua_setfield(L, table_index, "message");
     }
 
-    luaL_traceback(L, L, message, 1);
+    luaL_traceback(L, L, nullptr, 1);
+    lua_setfield(L, table_index, "stack");
+
     return 1;
   }
 
