@@ -119,11 +119,12 @@ console.log(lua.getGlobal("age")); // 30
 lua.setGlobal("throwError", () => {
   throw new Error("Something went wrong");
 });
-const result = lua.eval(`
-  local ok, err = pcall(throwError);
-  return { ok, err }
+const [success, err] = lua.eval(`
+  local success, err = pcall(throwError);
+  return success, err
 `);
-console.log(result); // { 1: false, 2: "Error: Something went wrong" }
+console.log(success); // false
+console.log(err); // Error: Something went wrong
 ```
 
 **Get Table Length**

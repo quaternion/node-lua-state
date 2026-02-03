@@ -651,14 +651,17 @@ namespace {
         return 1;
       }
     } catch (const Napi::Error& e) {
-      auto js_name = e.Get("name");
-      std::string name;
-      if (js_name.IsString()) {
-        name = js_name.As<Napi::String>().Utf8Value();
+      std::string msg;
+      auto stack_value = e.Get("stack");
+
+      if (stack_value.IsString()) {
+        msg = stack_value.As<Napi::String>().Utf8Value();
       } else {
-        name = "Error";
+        auto name_value = e.Get("name");
+        std::string name = name_value.IsString() ? name_value.As<Napi::String>().Utf8Value() : "Error";
+        msg = name + ": " + e.Message();
       }
-      std::string msg = name + ": " + e.Message();
+
       return luaL_error(L, msg.c_str());
     } catch (const std::exception& e) {
       return luaL_error(L, e.what());

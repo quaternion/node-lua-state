@@ -1,5 +1,5 @@
 const { beforeEach, describe, it, mock } = require('node:test')
-const { deepStrictEqual, strictEqual } = require('node:assert/strict')
+const { deepStrictEqual, strictEqual, match } = require('node:assert/strict')
 const { LuaState } = require('../js')
 
 describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
@@ -143,15 +143,15 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
     })
 
     it('should set function with exception', () => {
-      const err = new Error('hello world')
       luaState.setGlobal('throw', () => {
-        throw err
+        throw new Error('hello')
       })
-      const res = luaState.eval(`
-        local ok, err = pcall(throw)
-        return { ok, err }
+      const [success, err] = luaState.eval(`
+        local success, err = pcall(throw)
+        return success, err
       `)
-      deepStrictEqual(res, { 1: false, 2: `${err.name}: ${err.message}` })
+      strictEqual(success, false)
+      match(err, /^Error: hello\n.+/)
     })
   })
 })
