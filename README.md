@@ -1,6 +1,6 @@
 # lua-state - Native Lua & LuaJIT bindings for Node.js
 
-Embed real Lua (5.1-5.4) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required with prebuilt binaries.
+Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required with prebuilt binaries.
 
 [![npm](https://img.shields.io/npm/v/lua-state.svg)](https://www.npmjs.com/package/lua-state)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
@@ -19,7 +19,7 @@ Embed real Lua (5.1-5.4) and LuaJIT in Node.js with native N-API bindings. Creat
 
 ## ⚙️ Features <a id="features"></a>
 
-- ⚡ **Multiple Lua versions** - Supports Lua 5.1–5.4 and LuaJIT
+- ⚡ **Multiple Lua versions** - Supports Lua 5.1–5.5 and LuaJIT
 - 🧰 **Prebuilt Binaries** - Lua 5.4.8 included for Linux/macOS/Windows
 - 🔄 **Bidirectional integration** - Call Lua from JS and JS from Lua
 - 📦 **Rich data exchange** - Objects, arrays, functions in both directions
@@ -330,7 +330,7 @@ These variables can be used for CI/CD or custom build scripts.
 | wasmoon       | 5.4 (WASM)           | ✅         | Async/Promise       | Node/Browser compatible                      |
 | node-lua      | 5.1                  | ❌         | Native (legacy NAN) | Outdated, Linux-only                         |
 | lua-native    | 5.4 (N-API)          | ✅         | Native N-API        | Active project, no multi-version support     |
-| **lua-state** | **5.1–5.4, LuaJIT**  | ✅         | Native N-API        | Multi-version, prebuilt binaries, modern API |
+| **lua-state** | **5.1–5.5, LuaJIT**  | ✅         | Native N-API        | Multi-version, prebuilt binaries, modern API |
 
 ## ⚡ Performance <a id="performance"></a>
 
