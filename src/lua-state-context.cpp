@@ -42,20 +42,29 @@ namespace {
 
 } // namespace
 
+/**
+ * Napi Initializer
+ */
+void LuaStateContext::Init(Napi::Env env, Napi::Object _exports) {
+  auto lua_reg_symbol = Napi::Symbol::New(env, "lua_reg");
+  lua_reg_symbol_ref_ = Napi::Persistent(lua_reg_symbol);
+  env.AddCleanupHook([] { lua_reg_symbol_ref_.Reset(); });
+}
+
+/**
+ * Constructor
+ */
 LuaStateContext::LuaStateContext() {
   L_ = luaL_newstate();
   contexts_[L_] = this;
 }
 
+/**
+ * Destructor
+ */
 LuaStateContext::~LuaStateContext() {
   contexts_.erase(L_);
   lua_close(L_);
-}
-
-void LuaStateContext::Init(Napi::Env env, Napi::Object _exports) {
-  auto lua_reg_symbol = Napi::Symbol::New(env, "lua_reg");
-  lua_reg_symbol_ref_ = Napi::Persistent(lua_reg_symbol);
-  env.AddCleanupHook([] { lua_reg_symbol_ref_.Reset(); });
 }
 
 LuaStateContext* LuaStateContext::From(lua_State* L) {

@@ -4,7 +4,30 @@
 #include "lua-state.h"
 
 /**
- * constructor
+ * Napiapi Initializer
+ */
+void LuaState::Init(Napi::Env env, Napi::Object exports) {
+  Napi::Function lua_state_class = DefineClass(
+    env,
+    "LuaState",
+    {
+      InstanceMethod("evalFile", &LuaState::EvalLuaFile),
+      InstanceMethod("eval", &LuaState::EvalLuaString),
+      InstanceMethod("getGlobal", &LuaState::GetLuaGlobalValue),
+      InstanceMethod("getLength", &LuaState::GetLuaValueLength),
+      InstanceMethod("getVersion", &LuaState::GetLuaVersion),
+      InstanceMethod("setGlobal", &LuaState::SetLuaGlobalValue),
+    }
+  );
+
+  Napi::FunctionReference* constructor = new Napi::FunctionReference(Napi::Persistent(lua_state_class));
+  env.SetInstanceData(constructor);
+
+  exports.Set("LuaState", lua_state_class);
+}
+
+/**
+ * Constructor
  */
 LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(info) {
   auto open_all_libs = true;
@@ -35,29 +58,6 @@ LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(
   } else {
     ctx_.OpenLibs(libs_for_open);
   }
-}
-
-/**
- * napi initializer
- */
-void LuaState::Init(Napi::Env env, Napi::Object exports) {
-  Napi::Function lua_state_class = DefineClass(
-    env,
-    "LuaState",
-    {
-      InstanceMethod("evalFile", &LuaState::EvalLuaFile),
-      InstanceMethod("eval", &LuaState::EvalLuaString),
-      InstanceMethod("getGlobal", &LuaState::GetLuaGlobalValue),
-      InstanceMethod("getLength", &LuaState::GetLuaValueLength),
-      InstanceMethod("getVersion", &LuaState::GetLuaVersion),
-      InstanceMethod("setGlobal", &LuaState::SetLuaGlobalValue),
-    }
-  );
-
-  Napi::FunctionReference* constructor = new Napi::FunctionReference(Napi::Persistent(lua_state_class));
-  env.SetInstanceData(constructor);
-
-  exports.Set("LuaState", lua_state_class);
 }
 
 /**
