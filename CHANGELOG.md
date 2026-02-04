@@ -5,6 +5,20 @@ Both npm package versions (`packageVersion`) and native binary versions (`native
 
 ---
 
+## [1.2.0 / native 1.2.0]
+
+### Changed
+
+- Lua errors now preserve non-string values passed to `error(...)` via `LuaError#cause`
+- `LuaError#stack` now contains a formatted Lua traceback (instead of a raw value)
+- Calling `error({ ... })` no longer replaces the error message with `"Unknown Lua error"`
+
+### Added
+
+- `LuaError#cause` for non-string Lua error values
+
+---
+
 ## [1.1.3 / native 1.1.1]
 
 ### Fixed
