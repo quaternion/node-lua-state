@@ -149,6 +149,37 @@ const config = lua.evalFile("config.lua");
 console.log(config.title); // "My App"
 ```
 
+**Lua Errors**
+
+```js
+// Syntax error
+try {
+  lua.eval("return 1+");
+} catch (err) {
+  console.log(err instanceof LuaError); // true
+  console.log(err.message); // => [string "return 1+"]:1: unexpected symbol near <eof>
+}
+
+// String error
+try {
+  lua.eval('error("foo")');
+} catch (err) {
+  console.log(err instanceof LuaError); // true
+  console.log(err.message); // => "[string "error("foo")"]:1: foo"
+  console.log(err.stack); // Lua stack traceback
+}
+
+// Table error (non-string)
+try {
+  lua.eval('error({ foo = "bar" })');
+} catch (err) {
+  console.log(err instanceof LuaError); // true
+  console.log(err.message); // ""
+  console.log(err.cause); // { foo: "bar" }
+  console.log(err.stack); // Lua stack traceback
+}
+```
+
 ## 🕒 Execution Model
 
 All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution. For asynchronous I/O, consider isolating Lua VMs in worker threads.
@@ -163,6 +194,8 @@ All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs
 
 ### `LuaState` Class
 
+Represents an isolated, synchronous Lua VM instance.
+
 ```ts
 new LuaState(options?: {
   libs?: string[] | null // Libraries to load, use null or empty array to load none (default: all)
@@ -171,16 +204,29 @@ new LuaState(options?: {
 
 **Available libraries:** `base`, `bit32`, `coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table`, `utf8`
 
-**Core Methods**
+**Methods**
 
-| Method                   | Description         | Returns                         |
-| ------------------------ | ------------------- | ------------------------------- |
-| `eval(code)`             | Execute Lua code    | `LuaValue`                      |
-| `evalFile(path)`         | Run Lua file        | `LuaValue`                      |
-| `setGlobal(name, value)` | Set global variable | `this`                          |
-| `getGlobal(path)`        | Get global value    | `LuaValue \| null \| undefined` |
-| `getLength(path)`        | Get length of table | `number \| null \| undefined`   |
-| `getVersion()`           | Get Lua version     | `string`                        |
+| Method                   | Returns                         | Description         |
+| ------------------------ | ------------------------------- | ------------------- |
+| `eval(code)`             | `LuaValue`                      | Execute Lua code    |
+| `evalFile(path)`         | `LuaValue`                      | Run Lua file        |
+| `setGlobal(name, value)` | `this`                          | Set global variable |
+| `getGlobal(path)`        | `LuaValue \| null \| undefined` | Get global value    |
+| `getLength(path)`        | `number \| null \| undefined`   | Get length of table |
+| `getVersion()`           | `string`                        | Get Lua version     |
+
+### `LuaError` Class
+
+Errors thrown from Lua are represented as `LuaError` instances.
+
+**Properties**
+
+| Property  | Type                   | Description                                                            |
+| --------- | ---------------------- | ---------------------------------------------------------------------- |
+| `name`    | `"LuaError"`           | Error name                                                             |
+| `message` | `string`               | Error message (empty if a non-string value was passed to `error(...)`) |
+| `stack`   | `string \| undefined`  | Lua stack traceback (not a JavaScript stack trace)                     |
+| `cause`   | `unknown \| undefined` | Value passed to `error(...)` when it is not a string                   |
 
 ## 🔄 Type Mapping (JS ⇄ Lua) <a id="type-mapping"></a>
 
