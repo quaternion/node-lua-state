@@ -26,19 +26,18 @@ void LuaError::Init(Napi::Env env, Napi::Object exports) {
 LuaError::LuaError(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaError>(info) {
   Napi::Env env = info.Env();
 
-  Napi::String message = info.Length() > 0 ? info[0].As<Napi::String>() : Napi::String::New(env, "");
-
   Napi::Object self = info.This().As<Napi::Object>();
-
   self.Set("name", "LuaError");
-  self.Set("message", message);
+
+  Napi::String message_val = info.Length() > 0 ? info[0].As<Napi::String>() : Napi::String::New(env, "");
+  self.Set("message", message_val);
 
   if (info.Length() > 1 && info[1].IsObject()) {
     Napi::Object options = info[1].As<Napi::Object>();
 
-    auto cause = options.Get("cause");
-    if (!cause.IsUndefined()) {
-      self.Set("cause", cause);
+    auto cause_val = options.Get("cause");
+    if (!cause_val.IsUndefined()) {
+      self.Set("cause", cause_val);
     }
   }
 }
@@ -67,7 +66,7 @@ Napi::Error LuaError::New(Napi::Env env, const Napi::Object& lua_error) {
       header += " " + msg;
     }
 
-    std::string stack = header + "\n    " + stack_val.ToString().Utf8Value();
+    std::string stack = header + "\n    " + stack_val.As<Napi::String>().Utf8Value();
 
     instance.Set("stack", stack);
   }
