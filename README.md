@@ -239,13 +239,13 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 | `string`        | `string`       | UTF-8 encoded                                                               |
 | `number`        | `number`       | 64-bit double precision                                                     |
 | `boolean`       | `boolean`      |                                                                             |
-| `Date`          | `number`       | Milliseconds since Unix epoch                                               |
+| `date`          | `number`       | Milliseconds since Unix epoch                                               |
 | `undefined`     | `nil`          |                                                                             |
 | `null`          | `nil`          |                                                                             |
-| `Function`      | `function`     | Callable from Lua                                                           |
-| `Object`        | `table`        | Recursively copies enumerable fields. Non-enumerable properties are ignored |
-| `Array`         | `table`        | Indexed from 1 in Lua                                                       |
-| `BigInt`        | `string`       |                                                                             |
+| `function`      | `function`     | Callable from Lua                                                           |
+| `object`        | `table`        | Recursively copies enumerable fields. Non-enumerable properties are ignored |
+| `array`         | `table`        | Indexed from 1 in Lua                                                       |
+| `bigint`        | `string`       |                                                                             |
 
 ### Lua → JavaScript
 
