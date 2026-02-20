@@ -57,15 +57,13 @@ void LuaStateContext::Init(Napi::Env env, Napi::Object _exports) {
 LuaStateContext::LuaStateContext() {
   L_ = luaL_newstate();
   contexts_[L_] = this;
+  closed_ = false;
 }
 
 /**
  * Destructor
  */
-LuaStateContext::~LuaStateContext() {
-  contexts_.erase(L_);
-  lua_close(L_);
-}
+LuaStateContext::~LuaStateContext() { Close(); }
 
 LuaStateContext* LuaStateContext::From(lua_State* L) {
   auto context = contexts_.find(L);
@@ -76,7 +74,25 @@ LuaStateContext* LuaStateContext::From(lua_State* L) {
   }
 }
 
+bool LuaStateContext::IsClosed() { return closed_; }
+
+void LuaStateContext::Close() {
+  if (closed_) {
+    return;
+  }
+
+  closed_ = true;
+  js_functions_cache_.clear();
+  lua_close(L_);
+  contexts_.erase(L_);
+  L_ = nullptr;
+}
+
 void LuaStateContext::OpenLibs(const std::optional<std::vector<std::string>>& libs) {
+  if (closed_) {
+    return;
+  }
+
   if (libs) {
     auto lua_lib_functions_map = BuildLuaLibFunctionsMap();
 
@@ -96,6 +112,10 @@ void LuaStateContext::OpenLibs(const std::optional<std::vector<std::string>>& li
 }
 
 std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalFile(const Napi::Env& env, const std::string& file_path) {
+  if (closed_) {
+    return Napi::Error::New(env, "LuaState is closed");
+  }
+
   auto load_file_status = luaL_loadfile(L_, file_path.c_str());
 
   if (load_file_status != LUA_OK) {
@@ -106,6 +126,10 @@ std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalFile(const Napi::Env
 }
 
 std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalString(const Napi::Env& env, const std::string& lua_code) {
+  if (closed_) {
+    return Napi::Error::New(env, "LuaState is closed");
+  }
+
   auto load_string_status = luaL_loadstring(L_, lua_code.c_str());
 
   if (load_string_status != LUA_OK) {
@@ -116,11 +140,19 @@ std::variant<Napi::Value, Napi::Error> LuaStateContext::EvalString(const Napi::E
 }
 
 void LuaStateContext::SetLuaValue(const std::string& name, const Napi::Value& value) {
+  if (closed_) {
+    return;
+  }
+
   PushJsValueToStack(L_, value);
   lua_setglobal(L_, name.c_str());
 }
 
 Napi::Value LuaStateContext::GetLuaValueByPath(const Napi::Env& env, const std::string& lua_value_path) {
+  if (closed_) {
+    return env.Undefined();
+  }
+
   auto push_lua_value_status = PushLuaValueByPathToStack(L_, lua_value_path);
   if (push_lua_value_status == PushLuaValueByPathToStackStatus::NotFound) {
     return env.Null();
@@ -136,6 +168,10 @@ Napi::Value LuaStateContext::GetLuaValueByPath(const Napi::Env& env, const std::
 }
 
 Napi::Value LuaStateContext::GetLuaValueLengthByPath(const Napi::Env& env, const std::string& lua_value_path) {
+  if (closed_) {
+    return env.Undefined();
+  }
+
   auto push_lua_value_status = PushLuaValueByPathToStack(L_, lua_value_path);
   if (push_lua_value_status == PushLuaValueByPathToStackStatus::NotFound) {
     return env.Null();
@@ -161,6 +197,10 @@ Napi::Value LuaStateContext::GetLuaValueLengthByPath(const Napi::Env& env, const
 }
 
 std::string LuaStateContext::GetLuaVersion() {
+  if (closed_) {
+    return "LuaState closed";
+  }
+
   std::string compileTime;
 
 #ifdef LUAJIT_VERSION
@@ -197,40 +237,51 @@ Napi::Function LuaStateContext::FindOrCreateJsFunction(const Napi::Env& env, int
     }
   }
 
-  lua_State* L = this->L_;
+  lua_pushvalue(this->L_, lua_stack_index);
+  int lua_function_reg_index = luaL_ref(this->L_, LUA_REGISTRYINDEX);
 
-  lua_pushvalue(L, lua_stack_index);
-  int lua_function_reg_index = luaL_ref(L, LUA_REGISTRYINDEX);
+  LuaStateContext* thisCtx = this;
 
   auto js_function = Napi::Function::New(
     env,
-    [L, lua_function_reg_index](const Napi::CallbackInfo& info) -> Napi::Value {
+    [thisCtx, lua_function_reg_index](const Napi::CallbackInfo& info) -> Napi::Value {
+      auto env = info.Env();
+
+      if (thisCtx->IsClosed()) {
+        Napi::Error::New(env, "LuaState is closed");
+        return env.Undefined();
+      }
+
+      lua_State* L = thisCtx->L_;
+
       lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function_reg_index);
 
-      auto env = info.Env();
       auto args_count = info.Length();
-
       for (size_t i = 0; i < args_count; ++i) {
         PushJsValueToStack(L, info[i]);
       }
 
-      auto result = CallLuaFunctionOnStack(L, env, args_count);
+      auto luaFunctionResult = CallLuaFunctionOnStack(L, env, args_count);
 
-      if (std::holds_alternative<Napi::Error>(result)) {
-        std::get<Napi::Error>(result).ThrowAsJavaScriptException();
+      if (std::holds_alternative<Napi::Error>(luaFunctionResult)) {
+        std::get<Napi::Error>(luaFunctionResult).ThrowAsJavaScriptException();
         return env.Undefined();
       }
 
-      return std::get<Napi::Value>(result);
+      return std::get<Napi::Value>(luaFunctionResult);
     },
     "luaProxyFunction"
   );
 
   js_function.AddFinalizer(
-    [L, lua_function_ptr, lua_function_reg_index](Napi::Env, void*) {
-      LuaStateContext* lua_state_context = LuaStateContext::From(L);
+    [thisCtx, lua_function_ptr, lua_function_reg_index](Napi::Env, void*) {
+      if (thisCtx->IsClosed()) {
+        return;
+      }
 
-      if (!lua_state_context) {
+      LuaStateContext* lua_state_context = LuaStateContext::From(thisCtx->L_);
+
+      if (!lua_state_context || lua_state_context->IsClosed()) {
         return;
       }
 
@@ -674,6 +725,7 @@ namespace {
     auto* js_function_holder = static_cast<JsFunctionHolder*>(lua_touserdata(L, 1));
 
     if (js_function_holder && js_function_holder->ref) {
+      js_function_holder->ref->Reset();
       delete js_function_holder->ref;
       js_function_holder->ref = nullptr;
     }

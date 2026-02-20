@@ -11,6 +11,7 @@ void LuaState::Init(Napi::Env env, Napi::Object exports) {
     env,
     "LuaState",
     {
+      InstanceMethod("close", &LuaState::Close),
       InstanceMethod("evalFile", &LuaState::EvalLuaFile),
       InstanceMethod("eval", &LuaState::EvalLuaString),
       InstanceMethod("getGlobal", &LuaState::GetLuaGlobalValue),
@@ -58,6 +59,14 @@ LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(
   } else {
     ctx_.OpenLibs(libs_for_open);
   }
+}
+
+/**
+ * Close
+ */
+Napi::Value LuaState::Close(const Napi::CallbackInfo& info) {
+  ctx_.Close();
+  return info.Env().Undefined();
 }
 
 /**

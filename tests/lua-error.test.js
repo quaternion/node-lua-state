@@ -1,5 +1,5 @@
 const { describe, it } = require('node:test')
-const { ok, strictEqual, deepStrictEqual } = require('node:assert/strict')
+const { ok, strictEqual } = require('node:assert/strict')
 const { LuaError } = require('../js')
 
 describe(LuaError.name, () => {

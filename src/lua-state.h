@@ -13,6 +13,8 @@ public:
 private:
   LuaStateContext ctx_;
 
+  Napi::Value Close(const Napi::CallbackInfo&);
+
   // --- Eval methods
   Napi::Value EvalLuaFile(const Napi::CallbackInfo&);
   Napi::Value EvalLuaString(const Napi::CallbackInfo&);

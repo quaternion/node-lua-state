@@ -1,6 +1,7 @@
 declare module '*lua-state.node' {
   export class LuaState {
     constructor(opts?: LuaStateOptions)
+    close(): undefined
     evalFile(path: string): LuaValue | undefined
     evalFile<T extends LuaValue>(path: string): T
     eval(code: string): LuaValue | undefined
