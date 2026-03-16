@@ -4,7 +4,7 @@
 
 class LuaError : public Napi::ObjectWrap<LuaError> {
 public:
-  static void Init(Napi::Env, Napi::Object);
+  static void NapiInit(Napi::Env, Napi::Object);
   static Napi::Error New(Napi::Env, const Napi::Object&);
 
   LuaError(const Napi::CallbackInfo&);

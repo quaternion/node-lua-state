@@ -2,16 +2,16 @@
 
 #include <napi.h>
 
-#include "lua-state-context.h"
+#include "lua-js-runtime.h"
 
 class LuaState : public Napi::ObjectWrap<LuaState> {
 public:
   LuaState(const Napi::CallbackInfo&);
 
-  static void Init(Napi::Env, Napi::Object);
+  static void NapiInit(Napi::Env, Napi::Object);
 
 private:
-  LuaStateContext ctx_;
+  std::shared_ptr<LuaJsRuntime> runtime_;
 
   Napi::Value Close(const Napi::CallbackInfo&);
 
@@ -24,4 +24,7 @@ private:
   Napi::Value GetLuaValueLength(const Napi::CallbackInfo&);
   Napi::Value GetLuaVersion(const Napi::CallbackInfo&);
   Napi::Value SetLuaGlobalValue(const Napi::CallbackInfo&);
+
+  // --- Config
+  static LuaConfig ParseLuaConfig(const Napi::CallbackInfo&);
 };

@@ -4,8 +4,8 @@
       "name": "Linux",
       "includePath": ["/usr/local/include/**", "${workspaceFolder}/**"],
       "defines": [],
-      "cStandard": "c17",
-      "cppStandard": "gnu++17",
+      "cStandard": "c23",
+      "cppStandard": "gnu++23",
       "intelliSenseMode": "${default}"
     }
   ],

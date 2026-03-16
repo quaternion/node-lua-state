@@ -110,18 +110,18 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
 
   describe('with function', () => {
     it('should set function', () => {
-      const func = mock.fn((num, str, bool, tbl) => {
+      const mock_fn = mock.fn((num, str, bool, tbl) => {
         return { args: { num, str, bool, tbl } }
       })
 
-      luaState.setGlobal('func', func)
+      luaState.setGlobal('fn', mock_fn)
       luaState.eval(`
-        funcResult = func(1, "foo", true, { num = 2, str = "bar", bool = false })
+        fnResult = fn(1, "foo", true, { num = 2, str = "bar", bool = false })
       `)
 
-      strictEqual(func.mock.calls.length, 1, 'should be called once')
+      strictEqual(mock_fn.mock.calls.length, 1, 'should be called once')
       deepStrictEqual(
-        luaState.eval(`return funcResult`),
+        luaState.eval(`return fnResult`),
         {
           args: {
             num: 1,
@@ -135,10 +135,12 @@ describe(`${LuaState.name}#${LuaState.prototype.setGlobal.name}`, () => {
     })
 
     it('should set function with multiple returns', () => {
-      luaState.setGlobal('func', () => {
+      luaState.setGlobal('fn', () => {
         return [1, 'foo']
       })
-      luaState.eval(`r1, r2 = func()`)
+      luaState.eval(`
+        r1, r2 = fn()
+      `)
       deepStrictEqual(luaState.eval(`return { r1, r2 }`), { 1: 1, 2: 'foo' })
     })
 

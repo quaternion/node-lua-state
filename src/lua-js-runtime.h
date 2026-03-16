@@ -1,0 +1,49 @@
+#pragma once
+
+#include <memory>
+#include <napi.h>
+#include <string>
+#include <unordered_map>
+
+#include "lua-config.h"
+#include "lua-state-core.h"
+#include "lua-to-js-converter.h"
+#include "lua-visitor-concept.h"
+
+class LuaJsRuntime : public std::enable_shared_from_this<LuaJsRuntime> {
+public:
+  static constexpr const char* MetaTableName = "meta";
+
+  explicit LuaJsRuntime(const LuaConfig& cfg);
+  ~LuaJsRuntime();
+
+  std::string GetLuaVersion();
+
+  // Evaluation
+  Napi::Value EvalFile(const Napi::Env& env, const std::string_view& path);
+  Napi::Value EvalString(const Napi::Env& env, const std::string_view& source);
+
+  // Global variables
+  Napi::Value GetGlobal(const Napi::Env& env, const std::string& path);
+  Napi::Value GetLength(const Napi::Env& env, const std::string& path);
+
+  void SetGlobal(const std::string_view& name, const Napi::Value& value);
+
+  // Function management
+  Napi::Function CreateJsProxyFunction(const Napi::Env& env, const LuaFunction& lua_fn);
+
+  int InvokeJsFunction(const Napi::FunctionReference& fn_ref);
+
+private:
+  LuaStateCore core_;
+
+  std::unordered_map<const void*, Napi::FunctionReference> lua_fn_proxies_;
+
+  Napi::Value InvokeLuaFunction(const Napi::CallbackInfo& info, const LuaRegistryRef& fn_ref);
+  Napi::Value CallLuaFunction(const Napi::Env& env, int args_count);
+  void FinalizeFunctionProxy(const void* identity, const LuaRegistryRef& ref);
+
+  LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
+};
+
+using ProxyFunctionFactory = std::function<Napi::Function(const void*)>;

@@ -3,7 +3,7 @@
 /**
  * Napi Initializer
  */
-void LuaError::Init(Napi::Env env, Napi::Object exports) {
+void LuaError::NapiInit(Napi::Env env, Napi::Object exports) {
   auto lua_error_class = DefineClass(env, "LuaError", {});
 
   auto global = env.Global();

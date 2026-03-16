@@ -14,9 +14,12 @@
       "sources": [
         "<@(lua_sources)",
         "src/init.cpp",
+        "src/js-to-lua-converter.cpp",
         "src/lua-error.cpp",
-        "src/lua-state-context.cpp",
-        "src/lua-state.cpp"
+        "src/lua-js-runtime.cpp",
+        "src/lua-state-core.cpp",
+        "src/lua-state.cpp",
+        "src/lua-to-js-converter.cpp"
       ],
       "libraries": [
         "<@(lua_libraries)"
