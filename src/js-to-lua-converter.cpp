@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -9,11 +10,6 @@
 
 JsToLuaConverter::JsToLuaConverter(LuaStateCore& core) : core_(core) {}
 
-void JsToLuaConverter::NapiInit(Napi::Env env) {
-  visited_symbol_ref_ = Napi::Persistent(Napi::Symbol::New(env));
-  env.AddCleanupHook([] { visited_symbol_ref_.Reset(); });
-}
-
 void JsToLuaConverter::PushValue(const Napi::Value& value) {
   auto value_type = value.Type();
 
@@ -23,8 +19,7 @@ void JsToLuaConverter::PushValue(const Napi::Value& value) {
   }
 
   if (value.IsDate()) {
-    double millisecons = value.As<Napi::Date>().ValueOf();
-    core_.PushNumber(millisecons);
+    core_.PushNumber(value.As<Napi::Date>().ValueOf());
     return;
   }
 
@@ -61,20 +56,58 @@ void JsToLuaConverter::PushPrimitive(const napi_valuetype value_type, const Napi
   }
 }
 
+namespace {
+  class ObjectLuaRefWeakMap {
+  public:
+    ObjectLuaRefWeakMap(Napi::Env env) : env_(env) {
+      Napi::Object global = env.Global();
+      Napi::Function ctor = global.Get("WeakMap").As<Napi::Function>();
+
+      map_ = ctor.New({});
+
+      get_ = map_.Get("get").As<Napi::Function>();
+      set_ = map_.Get("set").As<Napi::Function>();
+    }
+
+    bool TryGet(const Napi::Object& key, LuaRegistryRef& out_ref) {
+      Napi::Value val = get_.Call(map_, {key});
+
+      if (val.IsUndefined())
+        return false;
+
+      out_ref.value = val.As<Napi::Number>().Int64Value();
+
+      return true;
+    }
+
+    void Set(const Napi::Object& key, LuaRegistryRef val) { set_.Call(map_, {key, Napi::Number::New(env_, val.value)}); }
+
+  private:
+    Napi::Env env_;
+    Napi::Object map_;
+    Napi::Function get_;
+    Napi::Function set_;
+  };
+} // namespace
+
 void JsToLuaConverter::PushObject(const Napi::Object& object) {
   auto env = object.Env();
-  Napi::Symbol visited_symbol = visited_symbol_ref_.Value();
+
+  ObjectLuaRefWeakMap visited(env);
 
   std::vector<Napi::Object> stack;
-  std::vector<Napi::Object> visited;
   stack.reserve(32);
-  visited.reserve(32);
+
+  std::vector<LuaRegistryRef> refs;
+  refs.reserve(32);
 
   auto push_new_table = [&](const Napi::Object& obj) -> LuaRegistryRef {
     core_.NewTable();
     auto ref = core_.PopRef();
-    obj.Set(visited_symbol, Napi::Number::New(env, ref.value));
-    visited.push_back(obj);
+
+    visited.Set(obj, ref);
+    refs.push_back(ref);
+
     return ref;
   };
 
@@ -83,25 +116,23 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
     if (value_type != napi_object) {
       PushPrimitive(value_type, value);
+    } else if (value.IsDate()) {
+      core_.PushNumber(value.As<Napi::Date>().ValueOf());
     } else {
-      // FIXME: handle Date
       Napi::Object child = value.As<Napi::Object>();
 
-      Napi::Value child_visited_value = child.Get(visited_symbol);
+      LuaRegistryRef child_ref;
 
-      if (child_visited_value.IsNumber()) {
-        int child_ref_value = child_visited_value.As<Napi::Number>().Int64Value();
-        core_.PushRef(LuaRegistryRef{child_ref_value});
-      } else {
-        auto ref = push_new_table(child);
-        core_.PushRef(ref);
+      if (!visited.TryGet(child, child_ref)) {
+        child_ref = push_new_table(child);
         stack.push_back(child);
       }
+
+      core_.PushRef(child_ref);
     }
   };
 
   auto root_ref = push_new_table(object);
-  // core_.Pop(1);
 
   stack.push_back(object);
 
@@ -109,8 +140,11 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     auto current_obj = stack.back();
     stack.pop_back();
 
-    const int current_ref_value = current_obj.Get(visited_symbol).As<Napi::Number>().Int64Value();
-    core_.PushRef(LuaRegistryRef{current_ref_value});
+    LuaRegistryRef current_ref;
+    bool ok = visited.TryGet(current_obj, current_ref);
+    assert(ok);
+
+    core_.PushRef(current_ref);
 
     if (current_obj.IsArray()) {
       Napi::Array array = current_obj.As<Napi::Array>();
@@ -138,9 +172,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
   core_.PushRef(root_ref);
 
-  for (auto& obj : visited) {
-    int visited_ref_value = obj.Get(visited_symbol).As<Napi::Number>().Int64Value();
-    core_.ReleaseRef(LuaRegistryRef{visited_ref_value});
-    obj.Delete(visited_symbol);
+  for (auto& ref : refs) {
+    core_.ReleaseRef(ref);
   }
 }

@@ -7,7 +7,6 @@
 #include "lua-state.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
-  JsToLuaConverter::NapiInit(env);
   LuaError::NapiInit(env, exports);
   LuaState::NapiInit(env, exports);
 

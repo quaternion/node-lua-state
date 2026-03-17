@@ -8,8 +8,6 @@ class JsToLuaConverter {
 public:
   explicit JsToLuaConverter(LuaStateCore&);
 
-  static void NapiInit(Napi::Env env);
-
   void PushValue(const Napi::Value&);
 
   struct JsFunctionHolder {
