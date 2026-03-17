@@ -4,11 +4,18 @@
 #include <unordered_map>
 #include <vector>
 
+#include "js-object-lua-ref-weak-map.hpp"
 #include "js-to-lua-converter.h"
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
 
-JsToLuaConverter::JsToLuaConverter(LuaStateCore& core) : core_(core) {}
+JsToLuaConverter::JsToLuaConverter(const Napi::Env& env, LuaStateCore& core) : core_(core), visited_(env) { lua_refs_.reserve(32); }
+
+JsToLuaConverter::~JsToLuaConverter() {
+  for (auto& ref : lua_refs_) {
+    core_.ReleaseRef(ref);
+  }
+}
 
 void JsToLuaConverter::PushValue(const Napi::Value& value) {
   auto value_type = value.Type();
@@ -56,57 +63,24 @@ void JsToLuaConverter::PushPrimitive(const napi_valuetype value_type, const Napi
   }
 }
 
-namespace {
-  class ObjectLuaRefWeakMap {
-  public:
-    ObjectLuaRefWeakMap(Napi::Env env) : env_(env) {
-      Napi::Object global = env.Global();
-      Napi::Function ctor = global.Get("WeakMap").As<Napi::Function>();
-
-      map_ = ctor.New({});
-
-      get_ = map_.Get("get").As<Napi::Function>();
-      set_ = map_.Get("set").As<Napi::Function>();
-    }
-
-    bool TryGet(const Napi::Object& key, LuaRegistryRef& out_ref) {
-      Napi::Value val = get_.Call(map_, {key});
-
-      if (val.IsUndefined())
-        return false;
-
-      out_ref.value = val.As<Napi::Number>().Int64Value();
-
-      return true;
-    }
-
-    void Set(const Napi::Object& key, LuaRegistryRef val) { set_.Call(map_, {key, Napi::Number::New(env_, val.value)}); }
-
-  private:
-    Napi::Env env_;
-    Napi::Object map_;
-    Napi::Function get_;
-    Napi::Function set_;
-  };
-} // namespace
-
 void JsToLuaConverter::PushObject(const Napi::Object& object) {
-  auto env = object.Env();
-
-  ObjectLuaRefWeakMap visited(env);
+  {
+    LuaRegistryRef ref;
+    if (visited_.TryGet(object, ref)) {
+      core_.PushRef(ref);
+      return;
+    }
+  }
 
   std::vector<Napi::Object> stack;
   stack.reserve(32);
-
-  std::vector<LuaRegistryRef> refs;
-  refs.reserve(32);
 
   auto push_new_table = [&](const Napi::Object& obj) -> LuaRegistryRef {
     core_.NewTable();
     auto ref = core_.PopRef();
 
-    visited.Set(obj, ref);
-    refs.push_back(ref);
+    visited_.Set(obj, ref);
+    lua_refs_.push_back(ref);
 
     return ref;
   };
@@ -123,7 +97,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
       LuaRegistryRef child_ref;
 
-      if (!visited.TryGet(child, child_ref)) {
+      if (!visited_.TryGet(child, child_ref)) {
         child_ref = push_new_table(child);
         stack.push_back(child);
       }
@@ -141,7 +115,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     stack.pop_back();
 
     LuaRegistryRef current_ref;
-    bool ok = visited.TryGet(current_obj, current_ref);
+    bool ok = visited_.TryGet(current_obj, current_ref);
     assert(ok);
 
     core_.PushRef(current_ref);
@@ -156,6 +130,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
         core_.SetIndex(-2, i + 1);
       }
     } else {
+      // TODO: change to "napi_get_all_property_names"
       Napi::Array prop_names = current_obj.GetPropertyNames();
       auto length = prop_names.Length();
 
@@ -171,8 +146,4 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
   }
 
   core_.PushRef(root_ref);
-
-  for (auto& ref : refs) {
-    core_.ReleaseRef(ref);
-  }
 }

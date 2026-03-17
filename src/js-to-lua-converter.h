@@ -2,11 +2,14 @@
 
 #include <napi.h>
 
+#include "js-object-lua-ref-weak-map.hpp"
 #include "lua-state-core.h"
+#include "lua-values.h"
 
 class JsToLuaConverter {
 public:
-  explicit JsToLuaConverter(LuaStateCore&);
+  explicit JsToLuaConverter(const Napi::Env&, LuaStateCore&);
+  ~JsToLuaConverter();
 
   void PushValue(const Napi::Value&);
 
@@ -16,6 +19,8 @@ public:
 
 private:
   LuaStateCore& core_;
+  JsObjectLuaRefWeakMap visited_;
+  std::vector<LuaRegistryRef> lua_refs_;
 
   static inline Napi::Reference<Napi::Symbol> visited_symbol_ref_;
 

@@ -100,7 +100,7 @@ Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, const std::string& pat
 
 void LuaJsRuntime::SetGlobal(const std::string_view& name, const Napi::Value& value) {
   LuaStateCore::StackGuard guard(core_);
-  auto js_to_lua_converter = JsToLuaConverter(core_);
+  auto js_to_lua_converter = JsToLuaConverter(value.Env(), core_);
   js_to_lua_converter.PushValue(value);
   core_.SetGlobal(name);
 }
@@ -171,7 +171,7 @@ Napi::Value LuaJsRuntime::InvokeLuaFunction(const Napi::CallbackInfo& info, cons
   auto args_count = info.Length();
 
   if (args_count > 0) {
-    auto js_to_lua_converter = JsToLuaConverter(core_);
+    auto js_to_lua_converter = JsToLuaConverter(env, core_);
 
     for (size_t i = 0; i < args_count; ++i) {
       js_to_lua_converter.PushValue(info[i]);
@@ -240,7 +240,7 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
 
   Napi::Value call_result = js_fn.Call(env.Global(), args_vector.size(), args);
 
-  JsToLuaConverter js_to_lua(core_);
+  JsToLuaConverter js_to_lua(env, core_);
 
   core_.SetTop(0);
 
