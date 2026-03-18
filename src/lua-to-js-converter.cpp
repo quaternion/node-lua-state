@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-LuaToJsConverter::LuaToJsConverter(const Napi::Env& env, FunctionFactory fn_factory) : env_(env), fn_factory_(fn_factory) {
+LuaToJsConverter::LuaToJsConverter(const Napi::Env& env, LuaJsRuntime& runtime) : env_(env), runtime_(runtime) {
   objects_.reserve(8);
   results_.reserve(8);
 }
@@ -17,7 +17,7 @@ void LuaToJsConverter::OnValue(LuaNil _value) { results_.push_back(env_.Null());
 void LuaToJsConverter::OnValue(LuaBool value) { results_.push_back(Napi::Boolean::New(env_, value.value)); }
 void LuaToJsConverter::OnValue(LuaNumber value) { results_.push_back(Napi::Number::New(env_, value.value)); }
 void LuaToJsConverter::OnValue(LuaString value) { results_.push_back(Napi::String::New(env_, value.ptr, value.len)); }
-void LuaToJsConverter::OnValue(LuaFunction value) { results_.push_back(fn_factory_(value)); }
+void LuaToJsConverter::OnValue(LuaFunction value) { results_.push_back(runtime_.CreateJsProxyFunction(env_, value)); }
 bool LuaToJsConverter::OnValue(LuaTable value) {
   auto [it, inserted] = objects_.try_emplace(value.identity, Napi::Object::New(env_));
   results_.push_back(it->second);
@@ -31,7 +31,7 @@ void LuaToJsConverter::OnProperty(LuaTableKey key, LuaNil _value) { SetProperty(
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaBool value) { SetProperty(key, Napi::Boolean::New(env_, value.value)); }
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaNumber value) { SetProperty(key, Napi::Number::New(env_, value.value)); }
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaString value) { SetProperty(key, Napi::String::New(env_, value.ptr, value.len)); }
-void LuaToJsConverter::OnProperty(LuaTableKey key, LuaFunction value) { SetProperty(key, fn_factory_(value)); }
+void LuaToJsConverter::OnProperty(LuaTableKey key, LuaFunction value) { SetProperty(key, runtime_.CreateJsProxyFunction(env_, value)); }
 bool LuaToJsConverter::OnProperty(LuaTableKey key, LuaTable value) {
   auto [it, inserted] = objects_.try_emplace(value.identity, Napi::Object::New(env_));
   SetProperty(key, it->second);

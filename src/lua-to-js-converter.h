@@ -6,14 +6,13 @@
 #include <variant>
 #include <vector>
 
+#include "lua-js-runtime.h"
 #include "lua-state-core.h"
 #include "lua-visitor-concept.h"
 
 class LuaToJsConverter {
 public:
-  using FunctionFactory = std::function<Napi::Function(const LuaFunction&)>;
-
-  explicit LuaToJsConverter(const Napi::Env&, FunctionFactory);
+  explicit LuaToJsConverter(const Napi::Env&, LuaJsRuntime&);
   ~LuaToJsConverter();
 
   // Visitor Implementation
@@ -39,7 +38,7 @@ public:
 
 private:
   const Napi::Env& env_;
-  FunctionFactory fn_factory_;
+  LuaJsRuntime& runtime_;
 
   std::unordered_map<const void*, Napi::Object> objects_;
   Napi::Object* current_object_;

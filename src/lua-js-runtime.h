@@ -7,7 +7,6 @@
 
 #include "lua-config.h"
 #include "lua-state-core.h"
-#include "lua-to-js-converter.h"
 #include "lua-visitor-concept.h"
 
 class LuaJsRuntime : public std::enable_shared_from_this<LuaJsRuntime> {
@@ -35,6 +34,8 @@ public:
   int InvokeJsFunction(const Napi::FunctionReference& fn_ref);
 
 private:
+  friend class LuaToJsConverter;
+
   LuaStateCore core_;
 
   std::unordered_map<const void*, Napi::FunctionReference> lua_fn_proxies_;
@@ -45,7 +46,7 @@ private:
   Napi::Value CallLuaFunction(const Napi::Env& env, int args_count);
   Napi::Error ExtractError(const Napi::Env& env);
 
-    LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
+  // LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
 };
 
 using ProxyFunctionFactory = std::function<Napi::Function(const void*)>;

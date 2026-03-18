@@ -78,7 +78,7 @@ Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, const std::string& pat
     return env.Undefined();
   }
 
-  auto converter = CreateLuaToJsConverter(env);
+  auto converter = LuaToJsConverter(env, *this);
 
   core_.Traverse(-1, converter);
 
@@ -205,7 +205,8 @@ Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) 
     return env.Undefined();
   }
 
-  auto lua_to_js_converter = CreateLuaToJsConverter(env);
+  auto lua_to_js_converter = LuaToJsConverter(env, *this);
+  ;
 
   int base_index = -results_count;
   for (int i = 0; i < results_count; i++) {
@@ -216,7 +217,7 @@ Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) 
 }
 
 Napi::Error LuaJsRuntime::ExtractError(const Napi::Env& env) {
-  auto lua_to_js = CreateLuaToJsConverter(env);
+  auto lua_to_js = LuaToJsConverter(env, *this);
 
   core_.Traverse(-1, lua_to_js);
   core_.Pop(1);
@@ -244,7 +245,7 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
 
   auto top_index = core_.GetTop();
 
-  auto lua_to_js_converter = CreateLuaToJsConverter(env);
+  auto lua_to_js_converter = LuaToJsConverter(env, *this);
 
   for (auto i = 2; i <= top_index; i++) {
     core_.Traverse(i, lua_to_js_converter);
@@ -279,10 +280,6 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
     js_to_lua.PushValue(call_result);
     return 1;
   }
-}
-
-LuaToJsConverter LuaJsRuntime::CreateLuaToJsConverter(const Napi::Env& env) {
-  return LuaToJsConverter(env, [this, env](const LuaFunction& fn) { return CreateJsProxyFunction(env, fn); });
 }
 
 namespace {
