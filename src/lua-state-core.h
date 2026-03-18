@@ -1,10 +1,7 @@
 #pragma once
 
-#include <mutex>
 #include <optional>
 #include <string>
-#include <unordered_map>
-#include <variant>
 
 #include "lua-values.h"
 #include "lua-visitor-concept.h"
@@ -18,14 +15,10 @@ public:
   explicit LuaStateCore();
   ~LuaStateCore();
 
-  static LuaStateCore* From(lua_State*);
-
   void OpenLibs(const std::optional<std::vector<std::string>>&);
   void Close();
   bool IsClosed();
-
-  void AttachUserData(const void*, const void*);
-  static void* GetUserData(const void*, lua_State* L);
+  std::string GetLuaVersion();
 
   LuaRegistryRef PopRef();
   LuaRegistryRef CopyRef(int index);
@@ -67,14 +60,6 @@ public:
   void PrintLuaStack(const std::string_view& title);
   void SetTop(int idx) { lua_settop(L_, idx); }
 
-  std::string GetLuaVersion();
-
-  // ============================================
-
-  // void SetLuaValue(const std::string&, const Napi::Value&);
-
-  Napi::Function FindOrCreateJsFunction(const Napi::Env&, int);
-
   struct StackGuard {
   public:
     explicit StackGuard(const LuaStateCore& core) : L_(core.L_), index_(lua_gettop(core.L_)) {}
@@ -88,11 +73,6 @@ public:
 private:
   lua_State* L_;
   bool closed_;
-
-  std::unordered_map<const void*, Napi::Function> js_functions_cache_;
-  std::mutex js_functions_cache_mtx_;
-
-  static inline std::unordered_map<lua_State*, LuaStateCore*> contexts_;
 };
 
 #include "lua-state-core.hpp"
