@@ -40,10 +40,12 @@ private:
   std::unordered_map<const void*, Napi::FunctionReference> lua_fn_proxies_;
 
   Napi::Value InvokeLuaFunction(const Napi::CallbackInfo& info, const LuaRegistryRef& fn_ref);
-  Napi::Value CallLuaFunction(const Napi::Env& env, int args_count);
   void FinalizeFunctionProxy(const void* identity, const LuaRegistryRef& ref);
 
-  LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
+  Napi::Value CallLuaFunction(const Napi::Env& env, int args_count);
+  Napi::Error ExtractError(const Napi::Env& env);
+
+    LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
 };
 
 using ProxyFunctionFactory = std::function<Napi::Function(const void*)>;

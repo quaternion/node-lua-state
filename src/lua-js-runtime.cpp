@@ -3,6 +3,7 @@
 
 #include "js-to-lua-converter.h"
 #include "lua-config.h"
+#include "lua-error.h"
 #include "lua-js-runtime.h"
 #include "lua-to-js-converter.h"
 
@@ -37,23 +38,31 @@ std::string LuaJsRuntime::GetLuaVersion() { return core_.GetLuaVersion(); }
 Napi::Value LuaJsRuntime::EvalFile(const Napi::Env& env, const std::string_view& path) {
   LuaStateCore::StackGuard guard(core_);
 
-  if (!core_.LoadFile(path)) {
-    // TODO: pick error from stack
+  try {
+    core_.LoadFile(path);
+    return CallLuaFunction(env, 0);
+  } catch (const LuaStateCore::LuaException&) {
+    auto error = ExtractError(env);
+    error.ThrowAsJavaScriptException();
+    return env.Undefined();
+  } catch (...) {
     return env.Undefined();
   }
-
-  return CallLuaFunction(env, 0);
 }
 
 Napi::Value LuaJsRuntime::EvalString(const Napi::Env& env, const std::string_view& source) {
   LuaStateCore::StackGuard guard(core_);
 
-  if (!core_.LoadString(source)) {
-    // TODO: pick error from stack
+  try {
+    core_.LoadString(source);
+    return CallLuaFunction(env, 0);
+  } catch (const LuaStateCore::LuaException&) {
+    auto error = ExtractError(env);
+    error.ThrowAsJavaScriptException();
+    return env.Undefined();
+  } catch (...) {
     return env.Undefined();
   }
-
-  return CallLuaFunction(env, 0);
 }
 
 Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, const std::string& path) {
@@ -178,19 +187,19 @@ Napi::Value LuaJsRuntime::InvokeLuaFunction(const Napi::CallbackInfo& info, cons
     }
   }
 
-  return CallLuaFunction(env, args_count);
+  try {
+    return CallLuaFunction(env, args_count);
+  } catch (const LuaStateCore::LuaException&) {
+    auto error = ExtractError(env);
+    error.ThrowAsJavaScriptException();
+    return env.Undefined();
+  } catch (...) {
+    return env.Undefined();
+  }
 }
 
 Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) {
-  auto call_result = core_.PCall(args_count);
-
-  if (!call_result) {
-    // TODO: handle error
-
-    return env.Undefined();
-  }
-
-  int results_count = call_result.value();
+  auto results_count = core_.PCall(args_count);
 
   if (results_count == 0) {
     return env.Undefined();
@@ -204,6 +213,23 @@ Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) 
   }
 
   return lua_to_js_converter.GetResult();
+}
+
+Napi::Error LuaJsRuntime::ExtractError(const Napi::Env& env) {
+  auto lua_to_js = CreateLuaToJsConverter(env);
+
+  core_.Traverse(-1, lua_to_js);
+  core_.Pop(1);
+
+  auto value = lua_to_js.GetResult();
+
+  if (value.IsObject()) {
+    return LuaError::New(env, value.As<Napi::Object>());
+  } else {
+    auto error_obj = Napi::Object::New(env);
+    error_obj.Set("message", value.ToString());
+    return LuaError::New(env, error_obj);
+  }
 }
 
 void LuaJsRuntime::FinalizeFunctionProxy(const void* identity, const LuaRegistryRef& ref) {
@@ -242,8 +268,6 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
 
   JsToLuaConverter js_to_lua(env, core_);
 
-  core_.SetTop(0);
-
   if (call_result.IsArray()) {
     auto call_results = call_result.As<Napi::Array>();
     auto results_count = call_results.Length();
@@ -265,7 +289,31 @@ namespace {
   int CallJsFunctionFromLuaCb(lua_State* L) {
     LuaJsRuntime* runtime = static_cast<LuaJsRuntime*>(lua_touserdata(L, lua_upvalueindex(1)));
     auto* holder = static_cast<JsToLuaConverter::JsFunctionHolder*>(lua_touserdata(L, 1));
-    return runtime->InvokeJsFunction(holder->ref);
+
+    if (!holder || !holder->ref) {
+      return luaL_error(L, "Invalid js-function reference");
+    }
+
+    try {
+      return runtime->InvokeJsFunction(holder->ref);
+    } catch (const Napi::Error& e) {
+      std::string msg;
+      auto stack_value = e.Get("stack");
+
+      if (stack_value.IsString()) {
+        msg = stack_value.As<Napi::String>().Utf8Value();
+      } else {
+        auto name_value = e.Get("name");
+        std::string name = name_value.IsString() ? name_value.As<Napi::String>().Utf8Value() : "Error";
+        msg = name + ": " + e.Message();
+      }
+
+      return luaL_error(L, msg.c_str());
+    } catch (const std::exception& e) {
+      return luaL_error(L, e.what());
+    } catch (...) {
+      return luaL_error(L, "Unknown error from JS function");
+    }
   }
 
   int GcJsFunctionFromLuaCb(lua_State* L) {

@@ -46,24 +46,27 @@ public:
   void SetMetaTable(int index);
   void SetGlobal(std::string_view name);
 
+  void Error(std::string_view msg);
+
   template <LuaVisitor Visitor> void Traverse(int index, Visitor& visitor);
 
-  std::optional<int> PCall(int args_count);
+  void LoadString(const std::string_view& source) noexcept(false);
+  void LoadFile(const std::string_view& path) noexcept(false);
+  int PCall(int args_count) noexcept(false);
   std::optional<int> GetLength(int index);
 
   enum class PushValueByPathStatus { NotFound, BrokenPath, Found };
   PushValueByPathStatus PushValueByPath(const std::string& path);
 
-  bool LoadString(const std::string_view& source);
-  bool LoadFile(const std::string_view& path);
-
   void PrintLuaStack(const std::string_view& title);
   void SetTop(int idx) { lua_settop(L_, idx); }
+
+  struct LuaException {};
 
   struct StackGuard {
   public:
     explicit StackGuard(const LuaStateCore& core) : L_(core.L_), index_(lua_gettop(core.L_)) {}
-    ~StackGuard() { lua_settop(L_, index_); }
+    ~StackGuard() noexcept { lua_settop(L_, index_); }
 
   private:
     lua_State* L_;

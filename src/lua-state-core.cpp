@@ -106,6 +106,8 @@ void LuaStateCore::SetMetaTable(int index) { lua_setmetatable(L_, index); }
 
 void LuaStateCore::SetGlobal(std::string_view name) { lua_setglobal(L_, name.data()); }
 
+void LuaStateCore::Error(std::string_view msg) { luaL_error(L_, msg.data()); }
+
 LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(const std::string& path) {
   auto path_parts = SplitLuaPath(path);
 
@@ -137,7 +139,21 @@ LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(const std::str
   return LuaStateCore::PushValueByPathStatus::Found;
 }
 
-std::optional<int> LuaStateCore::PCall(int args_count) {
+void LuaStateCore::LoadString(const std::string_view& source) {
+  auto load_result = luaL_loadbuffer(L_, source.data(), source.size(), NULL);
+  if (load_result != LUA_OK) {
+    throw LuaException{};
+  };
+}
+
+void LuaStateCore::LoadFile(const std::string_view& path) {
+  auto load_result = luaL_loadfile(L_, path.data());
+  if (load_result != LUA_OK) {
+    throw LuaException{};
+  };
+}
+
+int LuaStateCore::PCall(int args_count) {
   // function stack index
   int function_index = lua_gettop(L_) - args_count;
 
@@ -152,7 +168,7 @@ std::optional<int> LuaStateCore::PCall(int args_count) {
   // call lua function on stack
   int function_call_status = lua_pcall(L_, args_count, LUA_MULTRET, function_index);
   if (function_call_status != LUA_OK) {
-    return std::nullopt;
+    throw LuaException{};
   }
 
   int top_index = lua_gettop(L_);
@@ -174,16 +190,6 @@ std::optional<int> LuaStateCore::GetLength(int index) {
   lua_pop(L_, 1);
 
   return length;
-}
-
-bool LuaStateCore::LoadString(const std::string_view& source) {
-  auto load_result = luaL_loadbuffer(L_, source.data(), source.size(), NULL);
-  return load_result == LUA_OK;
-}
-
-bool LuaStateCore::LoadFile(const std::string_view& path) {
-  auto load_result = luaL_loadfile(L_, path.data());
-  return load_result == LUA_OK;
 }
 
 std::string LuaStateCore::GetLuaVersion() {
