@@ -1,14 +1,13 @@
 #include <napi.h>
 
-#include "js-to-lua-converter.h"
+#include "js-object-lua-ref-weak-map.hpp"
 #include "lua-error.h"
-#include "lua-js-runtime.h"
-#include "lua-state-core.h"
 #include "lua-state.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   LuaError::NapiInit(env, exports);
   LuaState::NapiInit(env, exports);
+  JsObjectLuaRefWeakMap::NapiInit(env);
 
   return exports;
 }
