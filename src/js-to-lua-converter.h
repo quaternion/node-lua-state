@@ -1,8 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <napi.h>
 
-#include "js-object-lua-ref-weak-map.hpp"
+#include "js-object-lua-ref-map.hpp"
 #include "lua-state-core.h"
 #include "lua-values.h"
 
@@ -18,8 +19,9 @@ public:
   };
 
 private:
+  const Napi::Env& env_;
   LuaStateCore& core_;
-  JsObjectLuaRefWeakMap visited_;
+  std::unique_ptr<JsObjectLuaRefMap> visited_;
   std::vector<LuaRegistryRef> lua_refs_;
 
   void PushPrimitive(const napi_valuetype value_type, const Napi::Value& value);

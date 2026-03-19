@@ -4,12 +4,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "js-object-lua-ref-weak-map.hpp"
+#include "js-object-lua-ref-map.hpp"
 #include "js-to-lua-converter.h"
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
 
-JsToLuaConverter::JsToLuaConverter(const Napi::Env& env, LuaStateCore& core) : core_(core), visited_(env) { lua_refs_.reserve(32); }
+JsToLuaConverter::JsToLuaConverter(const Napi::Env& env, LuaStateCore& core) : env_(env), core_(core) { lua_refs_.reserve(32); }
 
 JsToLuaConverter::~JsToLuaConverter() {
   for (auto& ref : lua_refs_) {
@@ -64,9 +64,9 @@ void JsToLuaConverter::PushPrimitive(const napi_valuetype value_type, const Napi
 }
 
 void JsToLuaConverter::PushObject(const Napi::Object& object) {
-  {
+  if (visited_) {
     LuaRegistryRef ref;
-    if (visited_.TryGet(object, ref)) {
+    if (visited_->TryGet(object, ref)) {
       core_.PushRef(ref);
       return;
     }
@@ -77,9 +77,13 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
   auto push_new_table = [&](const Napi::Object& obj) -> LuaRegistryRef {
     core_.NewTable();
-    auto ref = core_.PopRef();
 
-    visited_.Set(obj, ref);
+    if (!visited_) {
+      visited_ = std::make_unique<JsObjectLuaRefMap>(env_);
+    }
+
+    auto ref = core_.PopRef();
+    visited_->Set(obj, ref);
     lua_refs_.push_back(ref);
 
     return ref;
@@ -97,7 +101,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
       LuaRegistryRef child_ref;
 
-      if (!visited_.TryGet(child, child_ref)) {
+      if (!visited_->TryGet(child, child_ref)) {
         child_ref = push_new_table(child);
         stack.push_back(child);
       }
@@ -115,7 +119,7 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     stack.pop_back();
 
     LuaRegistryRef current_ref;
-    bool ok = visited_.TryGet(current_obj, current_ref);
+    bool ok = visited_->TryGet(current_obj, current_ref);
     assert(ok);
 
     core_.PushRef(current_ref);
