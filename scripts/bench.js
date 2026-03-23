@@ -1,107 +1,226 @@
+const { performance } = require('node:perf_hooks')
+
 const { LuaState } = require('../js')
-const results = []
 
-function bench(label, fn, count = 1_000_000) {
-  const start = performance.now()
-  fn(count)
-  const end = performance.now()
-  const durationMs = Number((end - start).toFixed(2))
-  results.push({
-    Benchmark: label,
-    Iterations: count,
-    'Time (ms)': durationMs,
-  })
+const TEST_COUNT = 50_000
+const WARM_COUNT = 1_000
+
+function suite(suiteLabel) {
+  const results = []
+
+  const bench = (label) => (benchFn) => {
+    benchFn(WARM_COUNT)
+
+    const start = performance.now()
+    benchFn(TEST_COUNT)
+    const end = performance.now()
+    const durationMs = Number((end - start).toFixed(2))
+
+    results.push({
+      Benchmark: label,
+      Iterations: TEST_COUNT,
+      'Time (ms)': durationMs,
+    })
+  }
+
+  const suiteInstance = {
+    case: (caseLabel, setupFn) => {
+      const lua = new LuaState()
+      setupFn(lua, bench(caseLabel))
+      return suiteInstance
+    },
+    end: () => {
+      console.log(suiteLabel)
+      console.table(results)
+    },
+  }
+
+  return suiteInstance
 }
 
-// 1. Pure Lua computation
-{
-  const lua = new LuaState()
+function createFlatPojo() {
+  return {
+    id: 123,
+    name: 'test',
+    active: true,
+    score: 42.5,
+  }
+}
 
-  bench(
-    'Lua: pure computation',
-    (n) => {
+function createNestedPojo() {
+  return {
+    user: {
+      id: 1,
+      name: 'foo',
+      profile: {
+        age: 30,
+        city: 'x',
+      },
+    },
+    meta: {
+      active: true,
+      tags: ['a', 'b', 'c'],
+    },
+  }
+}
+
+console.log(`lua-state on ${new LuaState().getVersion()}`)
+
+suite('Call JS from Lua')
+  .case('Pure', (lua, bench) => {
+    const fn = () => {}
+    lua.setGlobal('fn', fn)
+    bench(
       lua.eval(`
-        local sum = 0
-        for i = 1, ${n} do
-          sum = sum + i
+        return function(n)
+          for i = 1, n do
+            fn()
+          end
         end
-        return sum
-      `)
-    },
-    1_000_000,
-  )
-}
-
-// 2. JS → Lua function call
-{
-  const lua = new LuaState()
-  lua.eval('function add(a, b) return a + b end')
-  /** @type { any } */
-  const add = lua.getGlobal('add')
-
-  bench(
-    'JS → Lua calls',
-    (n) => {
-      for (let i = 0; i < n; i++) {
-        add(1, 2)
-      }
-    },
-    50_000,
-  )
-}
-
-// 3. Lua → JS callback calls
-{
-  const lua = new LuaState()
-  const inc = (x) => x + 1
-
-  lua.setGlobal('inc', inc)
-
-  bench(
-    'Lua → JS calls',
-    (n) => {
+      `),
+    )
+  })
+  .case('Primitive', (lua, bench) => {
+    const fn = (x) => x + 1
+    lua.setGlobal('fn', fn)
+    bench(
       lua.eval(`
-      for i = 1, ${n} do
-        inc(i)
+        return function(n)
+          for i = 1, n do
+            fn(i)
+          end
+        end
+      `),
+    )
+  })
+  .case('Flat POJO', (lua, bench) => {
+    const fn = (objArg) => objArg
+    lua.setGlobal('fn', fn)
+    lua.setGlobal('arg', createFlatPojo())
+    bench(
+      lua.eval(`
+        return function(n)
+          for i = 1, n do
+            fn(arg)
+          end
+        end
+      `),
+    )
+  })
+  .case('Nested POJO', (lua, bench) => {
+    const fn = (objArg) => objArg
+    lua.setGlobal('fn', fn)
+    lua.setGlobal('arg', createNestedPojo())
+    bench(
+      lua.eval(`
+        return function(n)
+          for i = 1, n do
+            fn(arg)
+          end
+        end
+      `),
+    )
+  })
+  .end()
+
+suite('Call Lua from JS')
+  .case('Pure', (lua, bench) => {
+    const fn = lua.eval(`
+      return function()
       end
     `)
-    },
-    50_000,
-  )
-}
+    bench((n) => {
+      for (let i = 0; i < n; i++) fn()
+    })
+  })
+  .case('Primitive', (lua, bench) => {
+    const fn = lua.eval(`
+      return function(n)
+        return n + 1
+      end
+    `)
+    bench((n) => {
+      for (let i = 0; i < n; i++) fn(i)
+    })
+  })
+  .case('Flat POJO', (lua, bench) => {
+    const fn = lua.eval(`
+      return function(arg)
+        return arg
+      end
+    `)
+    const arg = createFlatPojo()
+    bench((n) => {
+      for (let i = 0; i < n; i++) fn(arg)
+    })
+  })
+  .case('Nested POJO', (lua, bench) => {
+    const fn = lua.eval(`
+      return function(arg)
+        return arg
+      end
+    `)
+    const arg = createNestedPojo()
+    bench((n) => {
+      for (let i = 0; i < n; i++) fn(arg)
+    })
+  })
+  .end()
 
-// 4. JS → Lua data transfer
-{
-  const lua = new LuaState()
+suite('Lua to JS Serialization')
+  .case('Function', (lua, bench) => {
+    lua.eval(`
+      function fn()
+      end
+    `)
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.getGlobal('fn')
+    })
+  })
+  .case('Primitive', (lua, bench) => {
+    lua.eval(`
+      value = 1
+    `)
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.getGlobal('value')
+    })
+  })
+  .case('Flat POJO', (lua, bench) => {
+    lua.setGlobal('value', createFlatPojo())
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.getGlobal('value')
+    })
+  })
+  .case('Nested POJO', (lua, bench) => {
+    lua.setGlobal('value', createNestedPojo())
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.getGlobal('value')
+    })
+  })
+  .end()
 
-  bench(
-    'JS → Lua data transfer',
-    (n) => {
-      for (let i = 0; i < n; i++) {
-        lua.setGlobal('obj', { x: 1, y: 2, z: 3, arr: [1, 2, 3] })
-      }
-    },
-    50_000,
-  )
-}
-
-// 5. Lua → JS data extraction
-{
-  const lua = new LuaState()
-
-  lua.eval(`
-    obj = { x = 1, y = 2, z = 3, arr = { 1, 2, 3} }
-  `)
-  bench(
-    'Lua → JS data extraction',
-    (n) => {
-      for (let i = 0; i < n; i++) {
-        lua.getGlobal('obj')
-      }
-    },
-    50_000,
-  )
-}
-
-console.log(`lua-state on ${new LuaState().getVersion()}:`)
-console.table(results)
+suite('JS to Lua Serialization')
+  .case('Function', (lua, bench) => {
+    const fn = () => {}
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.setGlobal('fn', fn)
+    })
+  })
+  .case('Primitive', (lua, bench) => {
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.setGlobal('value', i)
+    })
+  })
+  .case('Flat POJO', (lua, bench) => {
+    const value = createFlatPojo()
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.setGlobal('value', value)
+    })
+  })
+  .case('Nested POJO', (lua, bench) => {
+    const value = createNestedPojo()
+    bench((n) => {
+      for (let i = 0; i < n; i++) lua.setGlobal('value', value)
+    })
+  })
+  .end()
