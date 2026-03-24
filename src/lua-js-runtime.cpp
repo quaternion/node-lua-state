@@ -245,27 +245,29 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
 
   auto top_index = core_.GetTop();
 
-  auto lua_to_js_converter = LuaToJsConverter(env, *this);
+  std::vector<napi_value> args;
 
-  for (auto i = 2; i <= top_index; i++) {
-    core_.Traverse(i, lua_to_js_converter);
+  if (top_index >= 2) {
+    args.reserve(top_index - 1);
+
+    auto lua_to_js_converter = LuaToJsConverter(env, *this);
+
+    for (auto i = 2; i <= top_index; i++) {
+      core_.Traverse(i, lua_to_js_converter);
+    }
+
+    auto& args_vector = lua_to_js_converter.Results();
+
+    for (size_t i = 0; i < args_vector.size(); i++) {
+      args.push_back(std::move(args_vector[i]));
+    }
   }
 
-  auto& args_vector = lua_to_js_converter.Results();
+  Napi::Value call_result = js_fn.Call(args);
 
-  constexpr int max_args_count = 16;
-  napi_value reserved_args[max_args_count];
-  napi_value* args = reserved_args;
-
-  if (args_vector.size() > max_args_count) {
-    args = new napi_value[args_vector.size()];
+  if (call_result.IsUndefined()) {
+    return 0;
   }
-
-  for (size_t i = 0; i < args_vector.size(); i++) {
-    args[i] = args_vector[i];
-  }
-
-  Napi::Value call_result = js_fn.Call(env.Global(), args_vector.size(), args);
 
   JsToLuaConverter js_to_lua(env, core_);
 
@@ -276,10 +278,10 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
       js_to_lua.PushValue(call_results.Get(i));
     }
     return results_count;
-  } else {
-    js_to_lua.PushValue(call_result);
-    return 1;
   }
+
+  js_to_lua.PushValue(call_result);
+  return 1;
 }
 
 namespace {
