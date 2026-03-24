@@ -4,30 +4,43 @@ const { LuaState } = require('../js')
 
 const TEST_COUNT = 50_000
 const WARM_COUNT = 5_000
+const SAMPLES_COUNT = 20
 
 function suite(suiteLabel) {
   const results = []
 
   const bench = (label) => (benchFn) => {
+    global?.gc()
+
     benchFn(WARM_COUNT)
 
     const samples = []
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < SAMPLES_COUNT; i++) {
       const start = performance.now()
       benchFn(TEST_COUNT)
       const end = performance.now()
       samples.push(end - start)
     }
 
-    const validSamples = samples.sort().slice(1, -1)
+    samples.sort((a, b) => a - b)
+    const trimmed = samples.slice(1, -1)
 
-    const avg = validSamples.reduce((a, b) => a + b, 0) / validSamples.length
+    const avg = trimmed.reduce((a, b) => a + b, 0) / trimmed.length
+    const midIdx = Math.floor(trimmed.length / 2)
+    const mdn =
+      trimmed.length % 2 !== 0
+        ? trimmed[midIdx]
+        : (trimmed[midIdx - 1] + trimmed[midIdx]) / 2
+    const opsPerSec = Math.round((TEST_COUNT / avg) * 1000)
 
     results.push({
       Benchmark: label,
-      Iterations: TEST_COUNT,
-      'Time (ms)': Number(avg.toFixed(2)),
+      'Min (ms)': Number(samples.at(0).toFixed(2)),
+      'Max (ms)': Number(samples.at(samples.length - 1).toFixed(2)),
+      'Avg (ms)': Number(avg.toFixed(2)),
+      'Mdn (ms)': Number(mdn.toFixed(2)),
+      'Ops/sec': opsPerSec,
     })
   }
 
@@ -73,6 +86,9 @@ function createNestedPojo() {
 }
 
 console.log(`lua-state on ${new LuaState().getVersion()}`)
+console.log(
+  `Iterations per bench: ${TEST_COUNT}, Samples: ${SAMPLES_COUNT}, Warmup: ${WARM_COUNT}\n`,
+)
 
 suite('Call JS from Lua')
   .case('Pure', (lua, bench) => {

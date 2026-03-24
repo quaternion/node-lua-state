@@ -63,7 +63,7 @@
   },
   "scripts": {
     "format": "biome format --write .",
-    "bench": "node scripts/bench.js",
+    "bench": "node --expose-gc --max-old-space-size=4096 scripts/bench.js",
     "install": "node scripts/install.js",
     "lint": "biome check .",
     "test": "node --test tests/**/*.test.js"
