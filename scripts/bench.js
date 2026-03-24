@@ -3,7 +3,7 @@ const { performance } = require('node:perf_hooks')
 const { LuaState } = require('../js')
 
 const TEST_COUNT = 50_000
-const WARM_COUNT = 1_000
+const WARM_COUNT = 5_000
 
 function suite(suiteLabel) {
   const results = []
@@ -11,15 +11,23 @@ function suite(suiteLabel) {
   const bench = (label) => (benchFn) => {
     benchFn(WARM_COUNT)
 
-    const start = performance.now()
-    benchFn(TEST_COUNT)
-    const end = performance.now()
-    const durationMs = Number((end - start).toFixed(2))
+    const samples = []
+
+    for (let i = 0; i < 10; i++) {
+      const start = performance.now()
+      benchFn(TEST_COUNT)
+      const end = performance.now()
+      samples.push(end - start)
+    }
+
+    const validSamples = samples.sort().slice(1, -1)
+
+    const avg = validSamples.reduce((a, b) => a + b, 0) / validSamples.length
 
     results.push({
       Benchmark: label,
       Iterations: TEST_COUNT,
-      'Time (ms)': durationMs,
+      'Time (ms)': Number(avg.toFixed(2)),
     })
   }
 
