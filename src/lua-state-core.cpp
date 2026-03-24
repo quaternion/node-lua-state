@@ -14,7 +14,7 @@ extern "C" {
 }
 
 namespace {
-  std::vector<std::string> SplitLuaPath(const std::string&);
+  std::vector<std::string> SplitLuaPath(std::string_view);
   std::unordered_map<std::string, lua_CFunction> BuildLuaLibFunctionsMap();
 
   int TracebackLuaCb(lua_State*);
@@ -108,7 +108,7 @@ void LuaStateCore::SetGlobal(std::string_view name) { lua_setglobal(L_, name.dat
 
 void LuaStateCore::Error(std::string_view msg) { luaL_error(L_, msg.data()); }
 
-LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(const std::string& path) {
+LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(std::string_view path) {
   auto path_parts = SplitLuaPath(path);
 
   if (path_parts.empty()) {
@@ -139,14 +139,14 @@ LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(const std::str
   return LuaStateCore::PushValueByPathStatus::Found;
 }
 
-void LuaStateCore::LoadString(const std::string_view& source) {
+void LuaStateCore::LoadString(std::string_view source) {
   auto load_result = luaL_loadbuffer(L_, source.data(), source.size(), NULL);
   if (load_result != LUA_OK) {
     throw LuaException{};
   };
 }
 
-void LuaStateCore::LoadFile(const std::string_view& path) {
+void LuaStateCore::LoadFile(std::string_view path) {
   auto load_result = luaL_loadfile(L_, path.data());
   if (load_result != LUA_OK) {
     throw LuaException{};
@@ -218,7 +218,7 @@ std::string LuaStateCore::GetLuaVersion() {
 
 namespace {
 
-  std::vector<std::string> SplitLuaPath(const std::string& path) {
+  std::vector<std::string> SplitLuaPath(std::string_view path) {
     std::vector<std::string> parts;
     size_t start = 0, pos;
     while ((pos = path.find('.', start)) != std::string::npos) {
@@ -228,23 +228,6 @@ namespace {
     parts.emplace_back(path.substr(start));
     return parts;
   }
-
-  // Napi::Error PopErrorFromStack(lua_State* L, const Napi::Env& env) {
-  //   auto value = ReadJsValueFromStack(L, env, -1);
-
-  //   lua_pop(L, 1);
-
-  //   Napi::Object error;
-
-  //   if (value.IsObject() && (value.As<Napi::Object>().Has("message") || value.As<Napi::Object>().Has("cause"))) {
-  //     error = value.As<Napi::Object>();
-  //   } else {
-  //     error = Napi::Object::New(env);
-  //     error.Set("message", value.ToString());
-  //   }
-
-  //   return LuaError::New(env, error);
-  // }
 
   int TracebackLuaCb(lua_State* L) {
     lua_createtable(L, 2, 2);
@@ -301,7 +284,7 @@ namespace {
 
 // #ifdef DEBUG
 #include <iostream>
-void LuaStateCore::PrintLuaStack(const std::string_view& title) {
+void LuaStateCore::PrintLuaStack(std::string_view title) {
   int top_index = lua_gettop(L_);
 
   std::cout << title << " stack (size = " << top_index << "):\n";

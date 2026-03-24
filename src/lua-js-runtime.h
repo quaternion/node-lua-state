@@ -19,14 +19,14 @@ public:
   std::string GetLuaVersion();
 
   // Evaluation
-  Napi::Value EvalFile(const Napi::Env& env, const std::string_view& path);
-  Napi::Value EvalString(const Napi::Env& env, const std::string_view& source);
+  Napi::Value EvalFile(const Napi::Env& env, std::string_view path);
+  Napi::Value EvalString(const Napi::Env& env, std::string_view source);
 
   // Global variables
-  Napi::Value GetGlobal(const Napi::Env& env, const std::string& path);
-  Napi::Value GetLength(const Napi::Env& env, const std::string& path);
+  Napi::Value GetGlobal(const Napi::Env& env, std::string_view path);
+  Napi::Value GetLength(const Napi::Env& env, std::string_view path);
 
-  void SetGlobal(const std::string_view& name, const Napi::Value& value);
+  void SetGlobal(std::string_view name, const Napi::Value& value);
 
   // Function management
   Napi::Function CreateJsProxyFunction(const Napi::Env& env, const LuaFunction& lua_fn);
@@ -45,8 +45,4 @@ private:
 
   Napi::Value CallLuaFunction(const Napi::Env& env, int args_count);
   Napi::Error ExtractError(const Napi::Env& env);
-
-  // LuaToJsConverter CreateLuaToJsConverter(const Napi::Env& env);
 };
-
-using ProxyFunctionFactory = std::function<Napi::Function(const void*)>;

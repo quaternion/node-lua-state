@@ -50,15 +50,15 @@ public:
 
   template <LuaVisitor Visitor> void Traverse(int index, Visitor& visitor);
 
-  void LoadString(const std::string_view& source) noexcept(false);
-  void LoadFile(const std::string_view& path) noexcept(false);
+  void LoadString(std::string_view source) noexcept(false);
+  void LoadFile(std::string_view path) noexcept(false);
   int PCall(int args_count) noexcept(false);
   std::optional<int> GetLength(int index);
 
   enum class PushValueByPathStatus { NotFound, BrokenPath, Found };
-  PushValueByPathStatus PushValueByPath(const std::string& path);
+  PushValueByPathStatus PushValueByPath(std::string_view path);
 
-  void PrintLuaStack(const std::string_view& title);
+  void PrintLuaStack(std::string_view title);
   void SetTop(int idx) { lua_settop(L_, idx); }
 
   struct LuaException {};

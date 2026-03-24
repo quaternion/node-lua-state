@@ -35,7 +35,7 @@ LuaJsRuntime::~LuaJsRuntime() {
 
 std::string LuaJsRuntime::GetLuaVersion() { return core_.GetLuaVersion(); }
 
-Napi::Value LuaJsRuntime::EvalFile(const Napi::Env& env, const std::string_view& path) {
+Napi::Value LuaJsRuntime::EvalFile(const Napi::Env& env, std::string_view path) {
   LuaStateCore::StackGuard guard(core_);
 
   try {
@@ -50,7 +50,7 @@ Napi::Value LuaJsRuntime::EvalFile(const Napi::Env& env, const std::string_view&
   }
 }
 
-Napi::Value LuaJsRuntime::EvalString(const Napi::Env& env, const std::string_view& source) {
+Napi::Value LuaJsRuntime::EvalString(const Napi::Env& env, std::string_view source) {
   LuaStateCore::StackGuard guard(core_);
 
   try {
@@ -65,16 +65,16 @@ Napi::Value LuaJsRuntime::EvalString(const Napi::Env& env, const std::string_vie
   }
 }
 
-Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, const std::string& path) {
+Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, std::string_view path) {
   LuaStateCore::StackGuard guard(core_);
 
-  auto push_result = core_.PushValueByPath(path);
+  auto push_status = core_.PushValueByPath(path);
 
-  if (push_result == LuaStateCore::PushValueByPathStatus::NotFound) {
+  if (push_status == LuaStateCore::PushValueByPathStatus::NotFound) {
     return env.Null();
   }
 
-  if (push_result == LuaStateCore::PushValueByPathStatus::BrokenPath) {
+  if (push_status == LuaStateCore::PushValueByPathStatus::BrokenPath) {
     return env.Undefined();
   }
 
@@ -85,16 +85,16 @@ Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, const std::string& pat
   return converter.GetResult();
 }
 
-Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, const std::string& path) {
+Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, std::string_view path) {
   LuaStateCore::StackGuard guard(core_);
 
-  auto push_result = core_.PushValueByPath(path);
+  auto push_status = core_.PushValueByPath(path);
 
-  if (push_result == LuaStateCore::PushValueByPathStatus::NotFound) {
+  if (push_status == LuaStateCore::PushValueByPathStatus::NotFound) {
     return env.Null();
   }
 
-  if (push_result == LuaStateCore::PushValueByPathStatus::BrokenPath) {
+  if (push_status == LuaStateCore::PushValueByPathStatus::BrokenPath) {
     return env.Undefined();
   }
 
@@ -107,7 +107,7 @@ Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, const std::string& pat
   return Napi::Number::New(env, length.value());
 }
 
-void LuaJsRuntime::SetGlobal(const std::string_view& name, const Napi::Value& value) {
+void LuaJsRuntime::SetGlobal(std::string_view name, const Napi::Value& value) {
   LuaStateCore::StackGuard guard(core_);
   auto js_to_lua_converter = JsToLuaConverter(value.Env(), core_);
   js_to_lua_converter.PushValue(value);

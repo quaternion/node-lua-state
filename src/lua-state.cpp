@@ -83,7 +83,7 @@ Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  std::string path = info[0].As<Napi::String>();
+  std::string path = info[0].As<Napi::String>().Utf8Value();
 
   return runtime_->GetGlobal(env, path);
 }
