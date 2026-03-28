@@ -6,7 +6,8 @@
       "variables": {
         "lua_include_dirs%": "<!(node build-tools/lua-source.js --include-dirs)",
         "lua_sources%": "<!(node build-tools/lua-source.js --sources)",
-        "lua_libraries%": "<!(node build-tools/lua-source.js --libraries)"
+        "lua_libraries%": "<!(node build-tools/lua-source.js --libraries)",
+        "enable_debug%" : "false"
       },
       "include_dirs": [
         "<@(lua_include_dirs)"
@@ -50,7 +51,23 @@
         "-Wl,--gc-sections",
         "-Wl,--as-needed",
         "-s"
+      ],
+      "conditions": [
+        ["enable_debug == 'true'", {
+          "cflags+": [
+            "-g",
+            "-fno-omit-frame-pointer"
+          ],
+          "cflags_cc+": [
+            "-g",
+            "-fno-omit-frame-pointer"
+          ],
+          "cflags!": ["-flto"],
+          "cflags_cc!": ["-flto"],
+          "ldflags!": ["-s", "-flto"]
+        }]
       ]
     }
   ]
 }
+

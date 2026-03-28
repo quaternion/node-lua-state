@@ -31,7 +31,13 @@ async function install(luaVersion = LuaEnv.version) {
     return false
   }
 
-  if (!runNodeGyp(['rebuild', '--release'])) {
+  if (
+    !runNodeGyp([
+      'rebuild',
+      '--release',
+      `--enable_debug=${LuaStateEnv.debug || false}`,
+    ])
+  ) {
     logger.error('Built failed.')
     return false
   }

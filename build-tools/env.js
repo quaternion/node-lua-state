@@ -39,6 +39,11 @@ const LuaStateEnv = {
     const forceBuild = getEnvVariable('LUA_STATE_FORCE_BUILD')
     return ['1', 'true', 'yes', 'on', 'y'].includes(String(forceBuild).trim())
   },
+
+  get debug() {
+    const forceBuild = getEnvVariable('LUA_STATE_DEBUG')
+    return ['1', 'true', 'yes', 'on', 'y'].includes(String(forceBuild).trim())
+  },
 }
 
 const LuaBuildEnv = {
