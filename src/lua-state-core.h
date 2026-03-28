@@ -37,7 +37,7 @@ public:
   void PushMetaTable(std::string_view name);
   void PushCClosure(lua_CFunction fn, int args_count);
 
-  void NewTable();
+  void NewTable(int narr, int nrec);
   bool NewMetaTable(std::string_view name);
   void* NewUserData(size_t size);
 

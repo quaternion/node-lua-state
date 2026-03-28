@@ -92,7 +92,7 @@ void LuaStateCore::PushMetaTable(std::string_view name) { luaL_getmetatable(L_, 
 
 void LuaStateCore::PushCClosure(lua_CFunction fn, int args_count) { lua_pushcclosure(L_, fn, args_count); }
 
-void LuaStateCore::NewTable() { lua_newtable(L_); }
+void LuaStateCore::NewTable(int narr, int nrec) { lua_createtable(L_, narr, nrec); }
 
 bool LuaStateCore::NewMetaTable(std::string_view name) { return luaL_newmetatable(L_, name.data()) == LUA_OK; }
 

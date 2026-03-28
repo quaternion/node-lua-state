@@ -72,11 +72,30 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     }
   }
 
-  std::vector<Napi::Object> stack;
+  struct StackFrame {
+    Napi::Object obj;
+    Napi::Array props;
+    bool is_array;
+    int length;
+  };
+
+  std::vector<StackFrame> stack;
   stack.reserve(32);
 
   auto push_new_table = [&](const Napi::Object& obj) -> LuaRegistryRef {
-    core_.NewTable();
+    int array_length = 0;
+    int obj_length = 0;
+    bool is_array = obj.IsArray();
+    Napi::Array props;
+
+    if (is_array) {
+      array_length = obj.As<Napi::Array>().Length();
+    } else {
+      props = obj.GetPropertyNames();
+      obj_length = props.Length();
+    }
+
+    core_.NewTable(array_length, obj_length);
 
     if (!visited_) {
       visited_ = std::make_unique<JsObjectLuaRefMap>(env_);
@@ -84,7 +103,9 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
     auto ref = core_.PopRef();
     visited_->Set(obj, ref);
-    lua_refs_.push_back(ref);
+    lua_refs_.emplace_back(ref);
+
+    stack.emplace_back(StackFrame{obj, std::move(props), is_array, is_array ? array_length : obj_length});
 
     return ref;
   };
@@ -103,7 +124,6 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
       if (!visited_->TryGet(child, child_ref)) {
         child_ref = push_new_table(child);
-        stack.push_back(child);
       }
 
       core_.PushRef(child_ref);
@@ -112,35 +132,28 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
   auto root_ref = push_new_table(object);
 
-  stack.push_back(object);
-
   while (!stack.empty()) {
-    auto current_obj = stack.back();
+    auto current_frame = stack.back();
     stack.pop_back();
 
     LuaRegistryRef current_ref;
-    bool ok = visited_->TryGet(current_obj, current_ref);
+    bool ok = visited_->TryGet(current_frame.obj, current_ref);
     assert(ok);
 
     core_.PushRef(current_ref);
 
-    if (current_obj.IsArray()) {
-      Napi::Array array = current_obj.As<Napi::Array>();
-      auto length = array.Length();
+    if (current_frame.is_array) {
+      Napi::Array array = current_frame.obj.As<Napi::Array>();
 
-      for (uint32_t i = 0; i < length; ++i) {
+      for (uint32_t i = 0; i < current_frame.length; ++i) {
         Napi::Value array_item = array.Get(i);
         push_value(array_item);
         core_.SetIndex(-2, i + 1);
       }
     } else {
-      // TODO: change to "napi_get_all_property_names"
-      Napi::Array prop_names = current_obj.GetPropertyNames();
-      auto length = prop_names.Length();
-
-      for (uint32_t i = 0; i < length; ++i) {
-        Napi::Value prop_name = prop_names.Get(i);
-        Napi::Value prop_value = current_obj.Get(prop_name);
+      for (uint32_t i = 0; i < current_frame.length; ++i) {
+        Napi::Value prop_name = current_frame.props.Get(i);
+        Napi::Value prop_value = current_frame.obj.Get(prop_name);
         push_value(prop_value);
         core_.SetField(-2, prop_name.As<Napi::String>().Utf8Value());
       }
