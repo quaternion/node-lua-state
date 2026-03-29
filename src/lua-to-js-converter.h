@@ -1,14 +1,10 @@
 #pragma once
 
-#include <functional>
 #include <napi.h>
-#include <stack>
-#include <variant>
 #include <vector>
 
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
-#include "lua-visitor-concept.h"
 
 class LuaToJsConverter {
 public:
@@ -23,8 +19,8 @@ public:
   void OnValue(LuaString);
   void OnValue(LuaFunction);
   bool OnValue(LuaTable);
-  void SetTable(LuaTable);
   bool IsVisited(LuaTable);
+  void SetTable(LuaTable);
   void OnProperty(LuaTableKey, LuaNil);
   void OnProperty(LuaTableKey, LuaBool);
   void OnProperty(LuaTableKey, LuaNumber);
@@ -41,7 +37,7 @@ private:
   LuaJsRuntime& runtime_;
 
   std::unordered_map<const void*, Napi::Object> objects_;
-  Napi::Object* current_object_;
+  Napi::Object current_object_;
 
   std::vector<Napi::Value> results_;
 

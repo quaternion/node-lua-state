@@ -1,8 +1,4 @@
-#include <cassert>
-
 #include "lua-to-js-converter.h"
-
-#include <iostream>
 
 LuaToJsConverter::LuaToJsConverter(const Napi::Env& env, LuaJsRuntime& runtime) : env_(env), runtime_(runtime) {
   objects_.reserve(8);
@@ -13,20 +9,22 @@ LuaToJsConverter::~LuaToJsConverter() {}
 
 // Visitor Implementation
 
-void LuaToJsConverter::OnValue(LuaNil _value) { results_.push_back(env_.Null()); }
-void LuaToJsConverter::OnValue(LuaBool value) { results_.push_back(Napi::Boolean::New(env_, value.value)); }
-void LuaToJsConverter::OnValue(LuaNumber value) { results_.push_back(Napi::Number::New(env_, value.value)); }
-void LuaToJsConverter::OnValue(LuaString value) { results_.push_back(Napi::String::New(env_, value.ptr, value.len)); }
-void LuaToJsConverter::OnValue(LuaFunction value) { results_.push_back(runtime_.CreateJsProxyFunction(env_, value)); }
+void LuaToJsConverter::OnValue(LuaNil _value) { results_.emplace_back(env_.Null()); }
+void LuaToJsConverter::OnValue(LuaBool value) { results_.emplace_back(Napi::Boolean::New(env_, value.value)); }
+void LuaToJsConverter::OnValue(LuaNumber value) { results_.emplace_back(Napi::Number::New(env_, value.value)); }
+void LuaToJsConverter::OnValue(LuaString value) { results_.emplace_back(Napi::String::New(env_, value.ptr, value.len)); }
+void LuaToJsConverter::OnValue(LuaFunction value) { results_.emplace_back(runtime_.CreateJsProxyFunction(env_, value)); }
 bool LuaToJsConverter::OnValue(LuaTable value) {
   auto [it, inserted] = objects_.try_emplace(value.identity, Napi::Object::New(env_));
-  results_.push_back(it->second);
+  results_.emplace_back(it->second);
   return inserted;
 }
 
-void LuaToJsConverter::SetTable(LuaTable table) { current_object_ = &objects_.at(table.identity); }
 bool LuaToJsConverter::IsVisited(LuaTable table) { return objects_.contains(table.identity); };
-
+void LuaToJsConverter::SetTable(LuaTable table) {
+  auto it = objects_.find(table.identity);
+  current_object_ = it->second;
+}
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaNil _value) { SetProperty(key, env_.Null()); }
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaBool value) { SetProperty(key, Napi::Boolean::New(env_, value.value)); }
 void LuaToJsConverter::OnProperty(LuaTableKey key, LuaNumber value) { SetProperty(key, Napi::Number::New(env_, value.value)); }
@@ -70,9 +68,9 @@ void LuaToJsConverter::SetProperty(LuaTableKey key, Napi::Value value) {
       using T = std::decay_t<decltype(k)>;
 
       if constexpr (std::is_same_v<T, LuaString>) {
-        current_object_->Set(Napi::String::New(env_, k.ptr, k.len), value);
+        current_object_.Set(Napi::String::New(env_, k.ptr, k.len), value);
       } else {
-        current_object_->Set(k.value, value);
+        current_object_.Set(k.value, value);
       }
     },
     key
