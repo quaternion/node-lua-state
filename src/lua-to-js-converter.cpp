@@ -20,7 +20,6 @@ bool LuaToJsConverter::OnValue(LuaTable value) {
   return inserted;
 }
 
-bool LuaToJsConverter::IsVisited(LuaTable table) { return objects_.contains(table.identity); };
 void LuaToJsConverter::SetTable(LuaTable table) {
   auto it = objects_.find(table.identity);
   current_object_ = it->second;

@@ -19,7 +19,6 @@ public:
   void OnValue(LuaString);
   void OnValue(LuaFunction);
   bool OnValue(LuaTable);
-  bool IsVisited(LuaTable);
   void SetTable(LuaTable);
   void OnProperty(LuaTableKey, LuaNil);
   void OnProperty(LuaTableKey, LuaBool);
