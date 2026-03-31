@@ -78,11 +78,12 @@ Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, std::string_view path)
     return env.Undefined();
   }
 
-  auto converter = LuaToJsConverter(env, *this);
+  LuaToJsScope scope(lua_to_js_ctx_);
+  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
 
-  core_.Traverse(-1, converter);
+  core_.Traverse(-1, lua_to_js_converter);
 
-  return converter.GetResult();
+  return lua_to_js_converter.BuildResult();
 }
 
 Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, std::string_view path) {
@@ -205,24 +206,26 @@ Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) 
     return env.Undefined();
   }
 
-  auto lua_to_js_converter = LuaToJsConverter(env, *this);
-  ;
+  LuaToJsScope scope(lua_to_js_ctx_);
+  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
 
   int base_index = -results_count;
   for (int i = 0; i < results_count; i++) {
     core_.Traverse(base_index + i, lua_to_js_converter);
   }
 
-  return lua_to_js_converter.GetResult();
+  return lua_to_js_converter.BuildResult();
 }
 
 Napi::Error LuaJsRuntime::ExtractError(const Napi::Env& env) {
-  auto lua_to_js = LuaToJsConverter(env, *this);
+  LuaToJsScope scope(lua_to_js_ctx_);
 
-  core_.Traverse(-1, lua_to_js);
+  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
+
+  core_.Traverse(-1, lua_to_js_converter);
   core_.Pop(1);
 
-  auto value = lua_to_js.GetResult();
+  auto value = lua_to_js_converter.BuildResult();
 
   if (value.IsObject()) {
     return LuaError::New(env, value.As<Napi::Object>());
@@ -250,16 +253,15 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
   if (top_index >= 2) {
     args.reserve(top_index - 1);
 
-    auto lua_to_js_converter = LuaToJsConverter(env, *this);
+    LuaToJsScope lua_to_js_scope(lua_to_js_ctx_);
+    auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
 
     for (auto i = 2; i <= top_index; i++) {
       core_.Traverse(i, lua_to_js_converter);
     }
 
-    auto& args_vector = lua_to_js_converter.Results();
-
-    for (size_t i = 0; i < args_vector.size(); i++) {
-      args.push_back(std::move(args_vector[i]));
+    for (size_t i = 0; i < lua_to_js_ctx_.results.size(); i++) {
+      args.push_back(lua_to_js_ctx_.results[i]);
     }
   }
 
@@ -269,18 +271,19 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
     return 0;
   }
 
-  JsToLuaConverter js_to_lua(env, core_);
+  auto js_to_lua_converter = JsToLuaConverter(env, core_);
 
   if (call_result.IsArray()) {
     auto call_results = call_result.As<Napi::Array>();
     auto results_count = call_results.Length();
     for (auto i = 0; i < results_count; ++i) {
-      js_to_lua.PushValue(call_results.Get(i));
+      js_to_lua_converter.PushValue(call_results.Get(i));
     }
     return results_count;
   }
 
-  js_to_lua.PushValue(call_result);
+  js_to_lua_converter.PushValue(call_result);
+
   return 1;
 }
 

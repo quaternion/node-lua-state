@@ -7,6 +7,7 @@
 
 #include "lua-config.h"
 #include "lua-state-core.h"
+#include "lua-to-js-context.hpp"
 #include "lua-visitor-concept.h"
 
 class LuaJsRuntime : public std::enable_shared_from_this<LuaJsRuntime> {
@@ -37,6 +38,7 @@ private:
   friend class LuaToJsConverter;
 
   LuaStateCore core_;
+  LuaToJsContext lua_to_js_ctx_;
 
   std::unordered_map<const void*, Napi::FunctionReference> lua_fn_proxies_;
 

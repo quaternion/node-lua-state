@@ -5,10 +5,11 @@
 
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
+#include "lua-to-js-context.hpp"
 
 class LuaToJsConverter {
 public:
-  explicit LuaToJsConverter(const Napi::Env&, LuaJsRuntime&);
+  explicit LuaToJsConverter(const Napi::Env&, LuaJsRuntime&, LuaToJsContext&);
   ~LuaToJsConverter();
 
   // Visitor Implementation
@@ -28,17 +29,12 @@ public:
   bool OnProperty(LuaTableKey, LuaTable);
 
   // Result
-  Napi::Value GetResult();
-  const std::vector<Napi::Value>& Results();
+  Napi::Value BuildResult();
 
 private:
   const Napi::Env& env_;
   LuaJsRuntime& runtime_;
-
-  std::unordered_map<const void*, Napi::Object> objects_;
-  Napi::Object current_object_;
-
-  std::vector<Napi::Value> results_;
+  LuaToJsContext& ctx_;
 
   void SetProperty(LuaTableKey, Napi::Value);
 };
