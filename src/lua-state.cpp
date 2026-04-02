@@ -3,6 +3,7 @@
 
 #include "lua-config.h"
 #include "lua-state.h"
+#include "napi/napi-string-buffer.h"
 
 /**
  * Napiapi Initializer
@@ -83,9 +84,13 @@ Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  std::string path = info[0].As<Napi::String>().Utf8Value();
+  NapiStringBuffer<1024> path_buf;
 
-  return runtime_->GetGlobal(env, path);
+  if (path_buf.TryFastString(env, info[0])) {
+    return runtime_->GetGlobal(env, path_buf.GetFastString());
+  } else {
+    return runtime_->GetGlobal(env, path_buf.GetSlowString(env, info[0]));
+  }
 }
 
 /**
@@ -99,9 +104,13 @@ Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  std::string lua_value_path = info[0].As<Napi::String>();
+  NapiStringBuffer<1024> path_buf;
 
-  return runtime_->GetLength(env, lua_value_path);
+  if (path_buf.TryFastString(env, info[0])) {
+    return runtime_->GetLength(env, path_buf.GetFastString());
+  } else {
+    return runtime_->GetLength(env, path_buf.GetSlowString(env, info[0]));
+  }
 }
 
 /**
@@ -124,10 +133,14 @@ Napi::Value LuaState::SetLuaGlobalValue(const Napi::CallbackInfo& info) {
     return info.This();
   }
 
-  auto name = info[0].As<Napi::String>().Utf8Value();
-  auto value = info[1];
+  NapiStringBuffer<1024> name_buf;
 
-  runtime_->SetGlobal(name, value);
+  if (name_buf.TryFastString(env, info[0])) {
+    runtime_->SetGlobal(name_buf.GetFastString(), info[1]);
+  } else {
+    auto name = name_buf.GetSlowString(env, info[0]);
+    runtime_->SetGlobal(name, info[1]);
+  }
 
   return info.This();
 }

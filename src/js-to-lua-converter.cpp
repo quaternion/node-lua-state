@@ -8,6 +8,7 @@
 #include "js-to-lua-converter.h"
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
+#include "napi/napi-string-buffer.h"
 
 JsToLuaConverter::JsToLuaConverter(const Napi::Env& env, LuaStateCore& core) : env_(env), core_(core) { lua_refs_.reserve(32); }
 
@@ -35,9 +36,15 @@ void JsToLuaConverter::PushValue(const Napi::Value& value) {
 
 void JsToLuaConverter::PushPrimitive(const napi_valuetype value_type, const Napi::Value& value) {
   switch (value_type) {
-    case napi_string:
-      core_.PushString(value.As<Napi::String>().Utf8Value());
+    case napi_string: {
+      NapiStringBuffer<1024> buf;
+      if (buf.TryFastString(value.Env(), value)) {
+        core_.PushString(buf.GetFastString());
+      } else {
+        core_.PushString(buf.GetSlowString(value.Env(), value));
+      }
       break;
+    }
     case napi_number:
       core_.PushNumber(value.As<Napi::Number>().DoubleValue());
       break;
@@ -131,6 +138,8 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
   };
 
   auto root_ref = push_new_table(object);
+  napi_env env = object.Env();
+  NapiStringBuffer<256> prop_name_buf;
 
   while (!stack.empty()) {
     auto current_frame = stack.back();
@@ -154,8 +163,14 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
       for (uint32_t i = 0; i < current_frame.length; ++i) {
         Napi::Value prop_name = current_frame.props.Get(i);
         Napi::Value prop_value = current_frame.obj.Get(prop_name);
+
         push_value(prop_value);
-        core_.SetField(-2, prop_name.As<Napi::String>().Utf8Value());
+
+        if (prop_name_buf.TryFastString(env, prop_name)) {
+          core_.SetField(-2, prop_name_buf.GetFastString());
+        } else {
+          core_.SetField(-2, prop_name_buf.GetSlowString(env, prop_name));
+        }
       }
     }
 
