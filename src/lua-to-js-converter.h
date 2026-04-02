@@ -3,14 +3,26 @@
 #include <napi.h>
 #include <vector>
 
-#include "lua-js-runtime.h"
 #include "lua-state-core.h"
-#include "lua-to-js-context.hpp"
+
+class LuaJsRuntime;
 
 class LuaToJsConverter {
 public:
-  explicit LuaToJsConverter(const Napi::Env&, LuaJsRuntime&, LuaToJsContext&);
+  struct Scope {
+    explicit Scope(LuaToJsConverter& converter) : converter_(converter) {}
+    ~Scope() { converter_.Reset(); }
+
+  private:
+    LuaToJsConverter& converter_;
+  };
+
+  std::vector<Napi::Value> results;
+
+  explicit LuaToJsConverter(LuaJsRuntime&);
   ~LuaToJsConverter();
+
+  Scope CreateScope(const Napi::Env&);
 
   // Visitor Implementation
 
@@ -32,9 +44,12 @@ public:
   Napi::Value BuildResult();
 
 private:
-  const Napi::Env& env_;
+  const Napi::Env* env_;
   LuaJsRuntime& runtime_;
-  LuaToJsContext& ctx_;
+
+  std::unordered_map<const void*, Napi::Object> objects_;
+  Napi::Object current_object_;
 
   void SetProperty(LuaTableKey, Napi::Value);
+  void Reset();
 };

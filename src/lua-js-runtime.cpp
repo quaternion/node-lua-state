@@ -16,7 +16,7 @@ namespace {
   int GcJsFunctionFromLuaCb(lua_State* L);
 } // namespace
 
-LuaJsRuntime::LuaJsRuntime(const LuaConfig& config) {
+LuaJsRuntime::LuaJsRuntime(const LuaConfig& config) : lua_to_js_(*this) {
   core_.OpenLibs(config.libs);
 
   core_.NewMetaTable(LuaJsRuntime::MetaTableName);
@@ -78,12 +78,11 @@ Napi::Value LuaJsRuntime::GetGlobal(const Napi::Env& env, std::string_view path)
     return env.Undefined();
   }
 
-  LuaToJsScope scope(lua_to_js_ctx_);
-  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
+  auto scope = lua_to_js_.CreateScope(env);
 
-  core_.Traverse(-1, lua_to_js_converter);
+  core_.Traverse(-1, lua_to_js_);
 
-  return lua_to_js_converter.BuildResult();
+  return lua_to_js_.BuildResult();
 }
 
 Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, std::string_view path) {
@@ -206,26 +205,23 @@ Napi::Value LuaJsRuntime::CallLuaFunction(const Napi::Env& env, int args_count) 
     return env.Undefined();
   }
 
-  LuaToJsScope scope(lua_to_js_ctx_);
-  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
+  auto scope = lua_to_js_.CreateScope(env);
 
   int base_index = -results_count;
   for (int i = 0; i < results_count; i++) {
-    core_.Traverse(base_index + i, lua_to_js_converter);
+    core_.Traverse(base_index + i, lua_to_js_);
   }
 
-  return lua_to_js_converter.BuildResult();
+  return lua_to_js_.BuildResult();
 }
 
 Napi::Error LuaJsRuntime::ExtractError(const Napi::Env& env) {
-  LuaToJsScope scope(lua_to_js_ctx_);
+  auto scope = lua_to_js_.CreateScope(env);
 
-  auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
-
-  core_.Traverse(-1, lua_to_js_converter);
+  core_.Traverse(-1, lua_to_js_);
   core_.Pop(1);
 
-  auto value = lua_to_js_converter.BuildResult();
+  auto value = lua_to_js_.BuildResult();
 
   if (value.IsObject()) {
     return LuaError::New(env, value.As<Napi::Object>());
@@ -253,15 +249,16 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
   if (top_index >= 2) {
     args.reserve(top_index - 1);
 
-    LuaToJsScope lua_to_js_scope(lua_to_js_ctx_);
-    auto lua_to_js_converter = LuaToJsConverter(env, *this, lua_to_js_ctx_);
+    auto scope = lua_to_js_.CreateScope(env);
 
     for (auto i = 2; i <= top_index; i++) {
-      core_.Traverse(i, lua_to_js_converter);
+      core_.Traverse(i, lua_to_js_);
     }
 
-    for (size_t i = 0; i < lua_to_js_ctx_.results.size(); i++) {
-      args.push_back(lua_to_js_ctx_.results[i]);
+    auto& results = lua_to_js_.results;
+
+    for (size_t i = 0; i < results.size(); i++) {
+      args.push_back(results[i]);
     }
   }
 
