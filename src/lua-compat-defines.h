@@ -93,22 +93,17 @@ static void luaL_traceback_compat(lua_State* L, lua_State* L1, const char* msg, 
   lua_getglobal(L, "debug");
   if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
-    if (msg)
-      lua_pushstring(L, msg);
+    lua_pushstring(L, msg ? msg : "");
     return;
   }
   lua_getfield(L, -1, "traceback");
   if (!lua_isfunction(L, -1)) {
     lua_pop(L, 2);
-    if (msg)
-      lua_pushstring(L, msg);
+    lua_pushstring(L, msg ? msg : "");
     return;
   }
   lua_remove(L, -2); // remove "debug"
-  if (msg)
-    lua_pushstring(L, msg);
-  else
-    lua_pushnil(L);
+  lua_pushstring(L, msg ? msg : "");
   lua_pushinteger(L, level);
   lua_call(L, 2, 1);
 }
