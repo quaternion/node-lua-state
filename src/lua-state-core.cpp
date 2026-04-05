@@ -14,7 +14,6 @@ extern "C" {
 }
 
 namespace {
-  std::vector<std::string> SplitLuaPath(std::string_view);
   std::unordered_map<std::string, lua_CFunction> BuildLuaLibFunctionsMap();
 
   int TracebackLuaCb(lua_State*);
@@ -109,31 +108,47 @@ void LuaStateCore::SetGlobal(std::string_view name) { lua_setglobal(L_, name.dat
 void LuaStateCore::Error(std::string_view msg) { luaL_error(L_, msg.data()); }
 
 LuaStateCore::PushValueByPathStatus LuaStateCore::PushValueByPath(std::string_view path) {
-  auto path_parts = SplitLuaPath(path);
-
-  if (path_parts.empty()) {
+  if (path.empty()) {
     return LuaStateCore::PushValueByPathStatus::NotFound;
   }
 
-  lua_getglobal(L_, path_parts[0].c_str());
-  if (lua_isnil(L_, -1)) {
-    lua_pop(L_, 1);
-    return LuaStateCore::PushValueByPathStatus::NotFound;
-  }
+  size_t current_pos = 0;
+  bool is_first_segment = true;
 
-  for (size_t i = 1; i < path_parts.size(); ++i) {
-    if (!lua_istable(L_, -1)) {
-      lua_pop(L_, 1);
-      return LuaStateCore::PushValueByPathStatus::BrokenPath;
+  while (true) {
+    size_t dot_pos = path.find(".", current_pos);
+    bool is_last_iteration = dot_pos == std::string_view::npos;
+
+    std::string_view segment = is_last_iteration ? path.substr(current_pos) : path.substr(current_pos, dot_pos - current_pos);
+
+    if (is_first_segment) {
+#if LUA_VERSION_NUM >= 502
+      lua_pushglobaltable(L_); // Lua 5.2+
+#else
+      lua_pushvalue(L_, LUA_GLOBALSINDEX); // Lua 5.1
+#endif
+    } else {
+      if (!lua_istable(L_, -1)) {
+        lua_pop(L_, 1);
+        return LuaStateCore::PushValueByPathStatus::BrokenPath;
+      }
     }
 
-    lua_getfield(L_, -1, path_parts[i].c_str());
+    lua_pushlstring(L_, segment.data(), segment.size());
+    lua_gettable(L_, -2);
     lua_remove(L_, -2);
 
     if (lua_isnil(L_, -1)) {
       lua_pop(L_, 1);
-      return LuaStateCore::PushValueByPathStatus::BrokenPath;
+      return is_first_segment ? LuaStateCore::PushValueByPathStatus::NotFound : LuaStateCore::PushValueByPathStatus::BrokenPath;
     }
+
+    if (is_last_iteration) {
+      break;
+    }
+
+    is_first_segment = false;
+    current_pos = dot_pos + 1;
   }
 
   return LuaStateCore::PushValueByPathStatus::Found;
@@ -217,17 +232,6 @@ std::string LuaStateCore::GetLuaVersion() {
 }
 
 namespace {
-
-  std::vector<std::string> SplitLuaPath(std::string_view path) {
-    std::vector<std::string> parts;
-    size_t start = 0, pos;
-    while ((pos = path.find('.', start)) != std::string::npos) {
-      parts.emplace_back(path.substr(start, pos - start));
-      start = pos + 1;
-    }
-    parts.emplace_back(path.substr(start));
-    return parts;
-  }
 
   int TracebackLuaCb(lua_State* L) {
     lua_createtable(L, 2, 2);
