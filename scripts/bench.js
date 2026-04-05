@@ -36,10 +36,10 @@ function suite(suiteLabel) {
 
     results.push({
       Benchmark: label,
-      'Min (ms)': Number(samples.at(0).toFixed(2)),
-      'Max (ms)': Number(samples.at(samples.length - 1).toFixed(2)),
       'Avg (ms)': Number(avg.toFixed(2)),
       'Mdn (ms)': Number(mdn.toFixed(2)),
+      'Min (ms)': Number(samples.at(0).toFixed(2)),
+      'Max (ms)': Number(samples.at(samples.length - 1).toFixed(2)),
       'Ops/sec': opsPerSec,
     })
   }
