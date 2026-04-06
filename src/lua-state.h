@@ -3,6 +3,7 @@
 #include <napi.h>
 
 #include "lua-js-runtime.h"
+#include "napi/napi-string-buffer.h"
 
 class LuaState : public Napi::ObjectWrap<LuaState> {
 public:
@@ -12,6 +13,7 @@ public:
 
 private:
   std::shared_ptr<LuaJsRuntime> runtime_;
+  NapiStringBuffer<256> string_buf_;
 
   Napi::Value Close(const Napi::CallbackInfo&);
 

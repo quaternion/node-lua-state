@@ -6,6 +6,7 @@
 #include "js-object-lua-ref-map.hpp"
 #include "lua-state-core.h"
 #include "lua-values.h"
+#include "napi/napi-string-buffer.h"
 
 class JsToLuaConverter {
 public:
@@ -23,6 +24,7 @@ private:
   LuaStateCore& core_;
   std::unique_ptr<JsObjectLuaRefMap> visited_;
   std::vector<LuaRegistryRef> lua_refs_;
+  NapiStringBuffer<256> string_buf_;
 
   void PushPrimitive(const napi_valuetype value_type, const Napi::Value& value);
   void PushObject(const Napi::Object& object);

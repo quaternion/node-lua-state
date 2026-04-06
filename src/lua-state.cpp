@@ -84,12 +84,10 @@ Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  NapiStringBuffer<1024> path_buf;
-
-  if (path_buf.TryFastString(env, info[0])) {
-    return runtime_->GetGlobal(env, path_buf.GetFastString());
+  if (string_buf_.TryFastStringKey(env, info[0])) {
+    return runtime_->GetGlobal(env, string_buf_.GetFastString());
   } else {
-    return runtime_->GetGlobal(env, path_buf.GetSlowString(env, info[0]));
+    return runtime_->GetGlobal(env, string_buf_.GetSlowString(env, info[0]));
   }
 }
 
@@ -104,12 +102,10 @@ Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  NapiStringBuffer<1024> path_buf;
-
-  if (path_buf.TryFastString(env, info[0])) {
-    return runtime_->GetLength(env, path_buf.GetFastString());
+  if (string_buf_.TryFastStringKey(env, info[0])) {
+    return runtime_->GetLength(env, string_buf_.GetFastString());
   } else {
-    return runtime_->GetLength(env, path_buf.GetSlowString(env, info[0]));
+    return runtime_->GetLength(env, string_buf_.GetSlowString(env, info[0]));
   }
 }
 
@@ -133,13 +129,10 @@ Napi::Value LuaState::SetLuaGlobalValue(const Napi::CallbackInfo& info) {
     return info.This();
   }
 
-  NapiStringBuffer<1024> name_buf;
-
-  if (name_buf.TryFastString(env, info[0])) {
-    runtime_->SetGlobal(name_buf.GetFastString(), info[1]);
+  if (string_buf_.TryFastStringKey(env, info[0])) {
+    runtime_->SetGlobal(string_buf_.GetFastString(), info[1]);
   } else {
-    auto name = name_buf.GetSlowString(env, info[0]);
-    runtime_->SetGlobal(name, info[1]);
+    runtime_->SetGlobal(string_buf_.GetSlowString(env, info[0]), info[1]);
   }
 
   return info.This();
