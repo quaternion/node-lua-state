@@ -13,15 +13,34 @@ extern "C" {
 #include <lualib.h>
 }
 
-template <LuaVisitor Visitor> void LuaStateCore::Traverse(int index, Visitor& visitor) {
-  auto root_type = lua_type(L_, index);
-
-  // quick return if value is not table
-  if (root_type != LUA_TTABLE) {
-    DispatchPrimitive(L_, root_type, index, [&](auto&& value) { visitor.OnValue(value); });
-    return;
+template <LuaVisitor Visitor> inline void LuaStateCore::Traverse(int index, Visitor& visitor) {
+  switch (lua_type(L_, index)) {
+    case LUA_TNUMBER:
+      visitor.OnValue(LuaNumber{lua_tonumber(L_, index)});
+      break;
+    case LUA_TSTRING: {
+      size_t len;
+      const char* ptr = lua_tolstring(L_, index, &len);
+      visitor.OnValue(LuaString{ptr, len});
+      break;
+    }
+    case LUA_TBOOLEAN:
+      visitor.OnValue(LuaBool{lua_toboolean(L_, index) != 0});
+      break;
+    case LUA_TFUNCTION: {
+      visitor.OnValue(LuaFunction{lua_topointer(L_, index), index});
+      break;
+    }
+    case LUA_TTABLE:
+      TraverseTable(index, visitor);
+      break;
+    default:
+      visitor.OnValue(LuaNil{});
+      break;
   }
+}
 
+template <LuaVisitor Visitor> void LuaStateCore::TraverseTable(int index, Visitor& visitor) {
   struct QueueFrame {
     LuaRegistryRef ref;
     LuaTable table;
@@ -70,18 +89,36 @@ template <LuaVisitor Visitor> void LuaStateCore::Traverse(int index, Visitor& vi
         return LuaString{ptr, len};
       }();
 
-      auto prop_value_type = lua_type(L_, -1);
-
-      if (prop_value_type != LUA_TTABLE) {
-        DispatchPrimitive(L_, prop_value_type, -1, [&](auto&& value) { visitor.OnProperty(key, value); });
-      } else {
-        auto child_table = LuaTable{lua_topointer(L_, -1)};
-
-        // if the child table has not been visited, add a new frame to the queue
-        if (visitor.OnProperty(key, child_table)) {
-          auto child_ref = CopyRef(-1);
-          queue.emplace_back(QueueFrame{child_ref, child_table});
+      switch (lua_type(L_, -1)) {
+        case LUA_TNUMBER:
+          visitor.OnProperty(key, LuaNumber{lua_tonumber(L_, -1)});
+          break;
+        case LUA_TSTRING: {
+          size_t len;
+          const char* ptr = lua_tolstring(L_, -1, &len);
+          visitor.OnProperty(key, LuaString{ptr, len});
+          break;
         }
+        case LUA_TBOOLEAN:
+          visitor.OnProperty(key, LuaBool{lua_toboolean(L_, -1) != 0});
+          break;
+        case LUA_TFUNCTION: {
+          visitor.OnProperty(key, LuaFunction{lua_topointer(L_, -1), -1});
+          break;
+        }
+        case LUA_TTABLE: {
+          auto child_table = LuaTable{lua_topointer(L_, -1)};
+
+          // if the child table has not been visited, add a new frame to the queue
+          if (visitor.OnProperty(key, child_table)) {
+            auto child_ref = CopyRef(-1);
+            queue.emplace_back(QueueFrame{child_ref, child_table});
+          }
+          break;
+        }
+        default:
+          visitor.OnProperty(key, LuaNil{});
+          break;
       }
 
       Pop(1);
@@ -92,27 +129,3 @@ template <LuaVisitor Visitor> void LuaStateCore::Traverse(int index, Visitor& vi
     ReleaseRef(current_frame.ref);
   }
 };
-
-template <typename Callback> void DispatchPrimitive(lua_State* L, const int lua_type, const int index, Callback&& cb) {
-  switch (lua_type) {
-    case LUA_TNUMBER:
-      cb(LuaNumber{lua_tonumber(L, index)});
-      break;
-    case LUA_TSTRING: {
-      size_t len;
-      const char* ptr = lua_tolstring(L, index, &len);
-      cb(LuaString{ptr, len});
-      break;
-    }
-    case LUA_TBOOLEAN:
-      cb(LuaBool{lua_toboolean(L, index) != 0});
-      break;
-    case LUA_TFUNCTION: {
-      cb(LuaFunction{lua_topointer(L, index), index});
-      break;
-    }
-    case LUA_TNIL:
-      cb(LuaNil{});
-      break;
-  }
-}

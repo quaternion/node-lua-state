@@ -48,7 +48,7 @@ public:
 
   void Error(std::string_view msg);
 
-  template <LuaVisitor Visitor> void Traverse(int index, Visitor& visitor);
+  template <LuaVisitor Visitor> inline void Traverse(int index, Visitor& visitor);
 
   void LoadString(std::string_view source) noexcept(false);
   void LoadFile(std::string_view path) noexcept(false);
@@ -76,6 +76,8 @@ public:
 private:
   lua_State* L_;
   bool closed_;
+
+  template <LuaVisitor Visitor> void TraverseTable(int index, Visitor& visitor);
 };
 
 #include "lua-state-core.hpp"
