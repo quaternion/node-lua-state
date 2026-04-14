@@ -120,19 +120,22 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
     if (value_type != napi_object) {
       PushPrimitive(value_type, value);
-    } else if (value.IsDate()) {
-      core_.PushNumber(value.As<Napi::Date>().ValueOf());
-    } else {
-      Napi::Object child = value.As<Napi::Object>();
-
-      LuaRegistryRef child_ref;
-
-      if (!visited_->TryGet(child, child_ref)) {
-        child_ref = push_new_table(child);
-      }
-
-      core_.PushRef(child_ref);
+      return;
     }
+
+    if (value.IsDate()) {
+      core_.PushNumber(value.As<Napi::Date>().ValueOf());
+      return;
+    }
+
+    Napi::Object child = value.As<Napi::Object>();
+    LuaRegistryRef child_ref;
+
+    if (!visited_->TryGet(child, child_ref)) {
+      child_ref = push_new_table(child);
+    }
+
+    core_.PushRef(child_ref);
   };
 
   auto root_ref = push_new_table(object);
