@@ -16,7 +16,7 @@ namespace {
   int GcJsFunctionFromLuaCb(lua_State* L);
 } // namespace
 
-LuaJsRuntime::LuaJsRuntime(const LuaConfig& config) : lua_to_js_(*this) {
+LuaJsRuntime::LuaJsRuntime(const LuaConfig& config) : lua_to_js_(*this), js_to_lua_(this->core_) {
   core_.OpenLibs(config.libs);
 
   core_.NewMetaTable(LuaJsRuntime::MetaTableName);
@@ -109,8 +109,8 @@ Napi::Value LuaJsRuntime::GetLength(const Napi::Env& env, std::string_view path)
 
 void LuaJsRuntime::SetGlobal(std::string_view name, const Napi::Value& value) {
   LuaStateCore::StackGuard guard(core_);
-  auto js_to_lua_converter = JsToLuaConverter(value.Env(), core_);
-  js_to_lua_converter.PushValue(value);
+  auto scope = js_to_lua_.CreateScope();
+  js_to_lua_.PushValue(value);
   core_.SetGlobal(name);
 }
 
@@ -180,10 +180,10 @@ Napi::Value LuaJsRuntime::InvokeLuaFunction(const Napi::CallbackInfo& info, cons
   auto args_count = info.Length();
 
   if (args_count > 0) {
-    auto js_to_lua_converter = JsToLuaConverter(env, core_);
+    auto scope = js_to_lua_.CreateScope();
 
     for (size_t i = 0; i < args_count; ++i) {
-      js_to_lua_converter.PushValue(info[i]);
+      js_to_lua_.PushValue(info[i]);
     }
   }
 
@@ -249,7 +249,7 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
   if (top_index >= 2) {
     args.reserve(top_index - 1);
 
-    auto scope = lua_to_js_.CreateScope(env);
+    auto lua_to_js_scope = lua_to_js_.CreateScope(env);
 
     for (auto i = 2; i <= top_index; i++) {
       core_.Traverse(i, lua_to_js_);
@@ -268,18 +268,18 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
     return 0;
   }
 
-  auto js_to_lua_converter = JsToLuaConverter(env, core_);
+  auto js_to_lua_scope = js_to_lua_.CreateScope();
 
   if (call_result.IsArray()) {
     auto call_results = call_result.As<Napi::Array>();
     auto results_count = call_results.Length();
     for (auto i = 0; i < results_count; ++i) {
-      js_to_lua_converter.PushValue(call_results.Get(i));
+      js_to_lua_.PushValue(call_results.Get(i));
     }
     return results_count;
   }
 
-  js_to_lua_converter.PushValue(call_result);
+  js_to_lua_.PushValue(call_result);
 
   return 1;
 }

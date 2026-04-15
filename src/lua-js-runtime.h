@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "js-to-lua-converter.h"
 #include "lua-config.h"
 #include "lua-state-core.h"
 #include "lua-to-js-converter.h"
@@ -39,6 +40,7 @@ private:
 
   LuaStateCore core_;
   LuaToJsConverter lua_to_js_;
+  JsToLuaConverter js_to_lua_;
 
   std::unordered_map<const void*, Napi::FunctionReference> lua_fn_proxies_;
 

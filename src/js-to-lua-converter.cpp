@@ -1,21 +1,17 @@
 #include <cassert>
-#include <iostream>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
-#include "js-object-lua-ref-map.hpp"
+#include "js-object-lua-ref-cache.hpp"
 #include "js-to-lua-converter.h"
 #include "lua-js-runtime.h"
 #include "lua-state-core.h"
 
-JsToLuaConverter::JsToLuaConverter(const Napi::Env& env, LuaStateCore& core) : env_(env), core_(core) { lua_refs_.reserve(32); }
-
-JsToLuaConverter::~JsToLuaConverter() {
-  for (auto& ref : lua_refs_) {
-    core_.ReleaseRef(ref);
-  }
+JsToLuaConverter::JsToLuaConverter(LuaStateCore& core) : core_(core) {
+  lua_refs_.reserve(32);
+  objects_queue_.reserve(32);
 }
+
+JsToLuaConverter::~JsToLuaConverter() {}
 
 void JsToLuaConverter::PushValue(const Napi::Value& value) {
   auto value_type = value.Type();
@@ -31,7 +27,9 @@ void JsToLuaConverter::PushValue(const Napi::Value& value) {
   }
 
   PushObject(value.As<Napi::Object>());
-};
+}
+
+JsToLuaConverter::Scope JsToLuaConverter::CreateScope() { return Scope(*this); };
 
 void JsToLuaConverter::PushPrimitive(const napi_valuetype value_type, const Napi::Value& value) {
   switch (value_type) {
@@ -77,15 +75,11 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     }
   }
 
-  struct StackFrame {
-    Napi::Object obj;
-    Napi::Array props;
-    bool is_array;
-    int length;
-  };
+  auto env = object.Env();
 
-  std::vector<StackFrame> stack;
-  stack.reserve(32);
+  if (!visited_) {
+    visited_ = std::make_unique<JsObjectLuaRefCache>(env);
+  }
 
   auto push_new_table = [&](const Napi::Object& obj) -> LuaRegistryRef {
     int array_length = 0;
@@ -102,15 +96,12 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
 
     core_.NewTable(array_length, obj_length);
 
-    if (!visited_) {
-      visited_ = std::make_unique<JsObjectLuaRefMap>(env_);
-    }
-
     auto ref = core_.PopRef();
+
     visited_->Set(obj, ref);
     lua_refs_.emplace_back(ref);
 
-    stack.emplace_back(StackFrame{obj, std::move(props), is_array, is_array ? array_length : obj_length});
+    objects_queue_.emplace_back(ObjectQueueItem{obj, std::move(props), is_array, is_array ? array_length : obj_length});
 
     return ref;
   };
@@ -139,11 +130,10 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
   };
 
   auto root_ref = push_new_table(object);
-  napi_env env = object.Env();
 
-  while (!stack.empty()) {
-    auto current_frame = stack.back();
-    stack.pop_back();
+  while (!objects_queue_.empty()) {
+    auto current_frame = objects_queue_.back();
+    objects_queue_.pop_back();
 
     LuaRegistryRef current_ref;
     bool ok = visited_->TryGet(current_frame.obj, current_ref);
@@ -178,4 +168,14 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
   }
 
   core_.PushRef(root_ref);
+}
+
+void JsToLuaConverter::Reset() {
+  visited_ = nullptr;
+
+  for (auto& ref : lua_refs_) {
+    core_.ReleaseRef(ref);
+  }
+  lua_refs_.clear();
+  objects_queue_.clear();
 }

@@ -1,13 +1,13 @@
 #include <napi.h>
 
-#include "js-object-lua-ref-map.hpp"
+#include "js-object-lua-ref-cache.hpp"
 #include "lua-error.h"
 #include "lua-state.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   LuaError::NapiInit(env, exports);
   LuaState::NapiInit(env, exports);
-  JsObjectLuaRefMap::NapiInit(env);
+  JsObjectLuaRefCache::NapiInit(env);
 
   return exports;
 }

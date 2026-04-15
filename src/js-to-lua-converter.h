@@ -1,31 +1,53 @@
 #pragma once
 
-#include <memory>
 #include <napi.h>
 
-#include "js-object-lua-ref-map.hpp"
+#include "js-object-lua-ref-cache.hpp"
 #include "lua-state-core.h"
 #include "lua-values.h"
 #include "napi/napi-string-buffer.h"
 
 class JsToLuaConverter {
 public:
-  explicit JsToLuaConverter(const Napi::Env&, LuaStateCore&);
+  struct JsFunctionHolder;
+  struct Scope;
+
+  explicit JsToLuaConverter(LuaStateCore&);
   ~JsToLuaConverter();
 
   void PushValue(const Napi::Value&);
+  Scope CreateScope();
 
   struct JsFunctionHolder {
     Napi::FunctionReference ref;
   };
 
+  struct Scope {
+    explicit Scope(JsToLuaConverter& converter) : converter_(converter) {}
+    ~Scope() { converter_.Reset(); }
+
+  private:
+    JsToLuaConverter& converter_;
+  };
+
 private:
-  const Napi::Env& env_;
+  struct ObjectQueueItem;
+
   LuaStateCore& core_;
-  std::unique_ptr<JsObjectLuaRefMap> visited_;
+  std::vector<ObjectQueueItem> objects_queue_;
   std::vector<LuaRegistryRef> lua_refs_;
   NapiStringBuffer<256> string_buf_;
+  std::unique_ptr<JsObjectLuaRefCache> visited_;
 
   void PushPrimitive(const napi_valuetype value_type, const Napi::Value& value);
   void PushObject(const Napi::Object& object);
+
+  void Reset();
+
+  struct ObjectQueueItem {
+    Napi::Object obj;
+    Napi::Array props;
+    bool is_array;
+    int length;
+  };
 };
