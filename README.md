@@ -1,6 +1,6 @@
 # lua-state - Native Lua & LuaJIT bindings for Node.js
 
-Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required with prebuilt binaries.
+Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required when using prebuilt binaries.
 
 [![npm](https://img.shields.io/npm/v/lua-state.svg)](https://www.npmjs.com/package/lua-state)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
@@ -24,7 +24,7 @@ Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Creat
 - 🔄 **Bidirectional integration** - Call Lua from JS and JS from Lua
 - 📦 **Rich data exchange** - Objects, arrays, functions in both directions
 - 🎯 **TypeScript-ready** - Full type definitions included
-- 🚀 **Native performance** - N-API bindings, no WebAssembly overhead
+- 🚀 **Native performance** - Built with N-API (no WebAssembly)
 
 ## ⚡ Quick Start <a id="quick-start"></a>
 
@@ -35,25 +35,14 @@ npm install lua-state
 ```js
 const { LuaState } = require("lua-state");
 
-// Create a real Lua VM inside Node.js
 const lua = new LuaState();
 
-// Expose a JS function to Lua
-lua.setGlobal("getUser", () => ["Alice", 30]);
-
-// Run Lua code that calls JS and returns values back to JS
-const result = lua.eval(`
-  local name, age = getUser()
-  return {
-    greeting = "Hello, " .. name,
-    nextAge = age + 1
-  }
-`);
-
-console.log(result); // { greeting: "Hello, Alice", nextAge: 31 }
+lua.setGlobal("x", 10);
+const result = lua.eval("return x * 2");
+console.log(result); // 20
 ```
 
-Lua runs synchronously in the same thread as Node.js - no promises, no async bridge, no WASM.
+Lua runs synchronously in the same thread as Node.js and blocks the event loop during execution. This means long-running Lua code will block all JavaScript execution.
 
 ## 📦 Installation <a id="installation"></a>
 
@@ -73,14 +62,14 @@ const lua = new LuaState();
 **Get Current Lua Version**
 
 ```js
-console.log(lua.getVersion()); // "Lua 5.4.8"
+lua.getVersion(); // "Lua 5.4.8" or "LuaJIT 2.1.0-beta3"
 ```
 
 **Evaluate Lua Code**
 
 ```js
-console.log(lua.eval("return 2 + 2")); // 4
-console.log(lua.eval('return "a", "b", "c"')); // ["a", "b", "c"]
+lua.eval("return 2 + 2"); // 4
+lua.eval('return "a", "b", "c"'); // ["a", "b", "c"]
 ```
 
 **Share Variables**
@@ -91,10 +80,10 @@ lua.setGlobal("user", { name: "Alice", age: 30 });
 
 // Lua → JS
 lua.eval("config = { debug = true, port = 8080 }");
-console.log(lua.getGlobal("config")); // { debug: true, port: 8080 }
-console.log(lua.getGlobal("config.port")); // 8080
-console.log(lua.getGlobal("config.missing")); // undefined - path exists but field is missing
-console.log(lua.getGlobal("missing")); // null - global variable does not exist at all
+lua.getGlobal("config"); // { debug: true, port: 8080 }
+lua.getGlobal("config.port"); // 8080
+lua.getGlobal("config.missing"); // undefined (path exists but value is missing)
+lua.getGlobal("missing"); // null (global variable does not exist)
 ```
 
 **Call Functions Both Ways**
@@ -103,17 +92,17 @@ console.log(lua.getGlobal("missing")); // null - global variable does not exist 
 // Call Lua from JS
 lua.eval("function add(a, b) return a + b end");
 const add = lua.getGlobal("add");
-console.log(add(5, 7)); // 12
+add(5, 7); // 12
 
 // Call JS from Lua
 lua.setGlobal("add", (a, b) => a + b);
-console.log(lua.eval("return add(3, 4)")); // 12
+lua.eval("return add(3, 4)"); // 12
 
 // JS function with multiple returns
 lua.setGlobal("getUser", () => ["Alice", 30]);
 lua.eval("name, age = getUser()");
-console.log(lua.getGlobal("name")); // "Alice"
-console.log(lua.getGlobal("age")); // 30
+lua.getGlobal("name"); // "Alice"
+lua.getGlobal("age"); // 30
 
 // JS function that throws an error
 lua.setGlobal("throwError", () => {
@@ -123,15 +112,15 @@ const [success, err] = lua.eval(`
   local success, err = pcall(throwError);
   return success, err
 `);
-console.log(success); // false
-console.log(err); // Error: Something went wrong
+success; // false
+err.message; // "Something went wrong"
 ```
 
 **Get Table Length**
 
 ```js
 lua.eval("items = { 1, 2, 3 }");
-console.log(lua.getLength("items")); // 3
+lua.getLength("items"); // 3
 ```
 
 **File Execution**
@@ -146,37 +135,36 @@ return {
 
 ```js
 const config = lua.evalFile("config.lua");
-console.log(config.title); // "My App"
+config.title; // "My App"
 ```
 
 **Lua Errors**
 
 ```js
+// All errors are instances of LuaError
+
 // Syntax error
 try {
   lua.eval("return 1+");
 } catch (err) {
-  console.log(err instanceof LuaError); // true
-  console.log(err.message); // => [string "return 1+"]:1: unexpected symbol near <eof>
+  err instanceof LuaError; // true
+  err.message; // [string "return 1+"]:1: unexpected symbol near <eof>
 }
 
 // String error
 try {
   lua.eval('error("foo")');
 } catch (err) {
-  console.log(err instanceof LuaError); // true
-  console.log(err.message); // => "[string "error("foo")"]:1: foo"
-  console.log(err.stack); // Lua stack traceback
+  err.message; // [string "error(\"foo\")"]:1: foo
+  err.stack; // Lua-style stack trace (not a JavaScript stack)
 }
 
 // Table error (non-string)
 try {
   lua.eval('error({ foo = "bar" })');
 } catch (err) {
-  console.log(err instanceof LuaError); // true
-  console.log(err.message); // ""
-  console.log(err.cause); // { foo: "bar" }
-  console.log(err.stack); // Lua stack traceback
+  err.message; // ""
+  err.cause; // { foo: "bar" }
 }
 ```
 
@@ -184,7 +172,7 @@ try {
 
 All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs in the same thread as JavaScript, providing predictable and fast execution. For asynchronous I/O, consider isolating Lua VMs in worker threads.
 
-- `await` is **not required** and not supported - calls like `lua.eval()` block until completion
+- `await` is **not required** and not part of API - calls like `lua.eval()` block until completion
 - Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
 - Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
 
@@ -230,7 +218,7 @@ Errors thrown from Lua are represented as `LuaError` instances.
 
 ## 🔄 Type Mapping (JS ⇄ Lua) <a id="type-mapping"></a>
 
-When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are supported internally and won’t cause infinite recursion.
+When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are preserved during conversion.
 
 ### JavaScript → Lua
 
@@ -239,7 +227,7 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 | `string`        | `string`       | UTF-8 encoded                                                               |
 | `number`        | `number`       | 64-bit double precision                                                     |
 | `boolean`       | `boolean`      |                                                                             |
-| `date`          | `number`       | Milliseconds since Unix epoch                                               |
+| `date`          | `number`       | Milliseconds since Unix epoch (not converted back to Date)                  |
 | `undefined`     | `nil`          |                                                                             |
 | `null`          | `nil`          |                                                                             |
 | `function`      | `function`     | Callable from Lua                                                           |
@@ -249,18 +237,20 @@ When values are passed between JavaScript and Lua, they’re automatically conve
 
 ### Lua → JavaScript
 
-| Lua Type   | Becomes in JavaScript | Notes                               |
-| ---------- | --------------------- | ----------------------------------- |
-| `string`   | `string`              | UTF-8 encoded                       |
-| `number`   | `number`              | 64-bit double precision             |
-| `boolean`  | `boolean`             |                                     |
-| `nil`      | `null`                |                                     |
-| `table`    | `object`              | Converts to plain JavaScript object |
-| `function` | `function`            | Callable from JS                    |
+| Lua Type   | Becomes in JavaScript | Notes                                                                       |
+| ---------- | --------------------- | --------------------------------------------------------------------------- |
+| `string`   | `string`              | UTF-8 encoded                                                               |
+| `number`   | `number`              | 64-bit double precision                                                     |
+| `boolean`  | `boolean`             |                                                                             |
+| `nil`      | `null`                |                                                                             |
+| `table`    | `object`              | Converts to POJO (array-like tables are NOT converted to JavaScript arrays) |
+| `function` | `function`            | Callable from JS                                                            |
 
 > ⚠️ **Note:** Conversion is not always symmetrical - for example,  
 > a JS `Date` becomes a number in Lua, but that number won’t automatically  
 > convert back into a `Date` when returned to JS.
+
+> ⚠️ When Lua returns multiple values, they are returned as an array in JavaScript.
 
 ## 🧩 TypeScript Support
 
@@ -381,15 +371,13 @@ These variables can be used for CI/CD or custom build scripts.
 
 ## ⚡ Performance <a id="performance"></a>
 
-Benchmarked on Lua 5.4.8 (Ryzen 7900X, Debian Bookworm, Node.js 24):
+`lua-state` uses native N-API bindings and provides low-overhead communication between JavaScript and Lua.
 
-| Benchmark                | Iterations | Time (ms) |
-| ------------------------ | ---------- | --------- |
-| Lua: pure computation    | 1,000,000  | ≈ 3.8     |
-| JS → Lua calls           | 50,000     | ≈ 4.3     |
-| Lua → JS calls           | 50,000     | ≈ 6.4     |
-| JS → Lua data transfer   | 50,000     | ≈ 135.0   |
-| Lua → JS data extraction | 50,000     | ≈ 62.5    |
+Performance depends heavily on the type of data being exchanged:
+
+- Primitive values are extremely fast
+- Flat objects are moderately fast
+- Deep or large object graphs are significantly more expensive to serialize
 
 > To run the benchmark locally: `npm run bench`
 
