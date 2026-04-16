@@ -3,8 +3,8 @@
 #include <optional>
 #include <string>
 
-#include "lua-values.h"
-#include "lua-visitor-concept.h"
+#include "core/lua-values.h"
+#include "core/lua-visitor-concept.h"
 
 extern "C" {
 #include <lua.h>

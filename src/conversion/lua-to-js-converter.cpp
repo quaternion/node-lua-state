@@ -1,5 +1,5 @@
-#include "lua-to-js-converter.h"
-#include "lua-js-runtime.h"
+#include "conversion/lua-to-js-converter.h"
+#include "runtime/lua-js-runtime.h"
 
 LuaToJsConverter::LuaToJsConverter(LuaJsRuntime& runtime) : runtime_(runtime) {
   objects_.reserve(64);

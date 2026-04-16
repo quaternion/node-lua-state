@@ -3,7 +3,7 @@
 #include <napi.h>
 #include <vector>
 
-#include "lua-state-core.h"
+#include "core/lua-state-core.h"
 
 class LuaJsRuntime;
 

@@ -1,11 +1,11 @@
 #include <cassert>
 #include <iostream>
 
-#include "js-to-lua-converter.h"
-#include "lua-config.h"
-#include "lua-error.h"
-#include "lua-js-runtime.h"
-#include "lua-to-js-converter.h"
+#include "conversion/js-to-lua-converter.h"
+#include "conversion/lua-to-js-converter.h"
+#include "napi/lua-error.h"
+#include "runtime/lua-config.h"
+#include "runtime/lua-js-runtime.h"
 
 extern "C" {
 #include <lua.h>
@@ -160,9 +160,7 @@ Napi::Function LuaJsRuntime::CreateJsProxyFunction(const Napi::Env& env, const L
   );
 
   // insert crated function to cache
-  auto [_, inserted] = lua_fn_proxies_.emplace(lua_fn.identity, std::move(Napi::Weak(js_fn)));
-
-  assert(inserted);
+  lua_fn_proxies_.emplace(lua_fn.identity, std::move(Napi::Weak(js_fn)));
 
   return js_fn;
 }
@@ -273,7 +271,7 @@ int LuaJsRuntime::InvokeJsFunction(const Napi::FunctionReference& js_fn) {
   if (call_result.IsArray()) {
     auto call_results = call_result.As<Napi::Array>();
     auto results_count = call_results.Length();
-    for (auto i = 0; i < results_count; ++i) {
+    for (uint32_t i = 0; i < results_count; ++i) {
       js_to_lua_.PushValue(call_results.Get(i));
     }
     return results_count;

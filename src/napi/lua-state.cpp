@@ -1,9 +1,9 @@
 #include <napi.h>
 #include <variant>
 
-#include "lua-config.h"
-#include "lua-state.h"
+#include "napi/lua-state.h"
 #include "napi/napi-string-buffer.h"
+#include "runtime/lua-config.h"
 
 /**
  * Napiapi Initializer

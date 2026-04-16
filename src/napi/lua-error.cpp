@@ -1,4 +1,4 @@
-#include "lua-error.h"
+#include "napi/lua-error.h"
 
 /**
  * Napi Initializer

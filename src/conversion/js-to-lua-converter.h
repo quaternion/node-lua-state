@@ -2,9 +2,9 @@
 
 #include <napi.h>
 
-#include "js-object-lua-ref-cache.hpp"
-#include "lua-state-core.h"
-#include "lua-values.h"
+#include "conversion/js-object-lua-ref-cache.hpp"
+#include "core/lua-state-core.h"
+#include "core/lua-values.h"
 #include "napi/napi-string-buffer.h"
 
 class JsToLuaConverter {

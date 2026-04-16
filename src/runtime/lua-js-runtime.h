@@ -5,11 +5,11 @@
 #include <string>
 #include <unordered_map>
 
-#include "js-to-lua-converter.h"
-#include "lua-config.h"
-#include "lua-state-core.h"
-#include "lua-to-js-converter.h"
-#include "lua-visitor-concept.h"
+#include "conversion/js-to-lua-converter.h"
+#include "conversion/lua-to-js-converter.h"
+#include "core/lua-state-core.h"
+#include "core/lua-visitor-concept.h"
+#include "runtime/lua-config.h"
 
 class LuaJsRuntime : public std::enable_shared_from_this<LuaJsRuntime> {
 public:

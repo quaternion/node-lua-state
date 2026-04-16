@@ -1,10 +1,10 @@
 #include <cassert>
 #include <vector>
 
-#include "js-object-lua-ref-cache.hpp"
-#include "js-to-lua-converter.h"
-#include "lua-js-runtime.h"
-#include "lua-state-core.h"
+#include "conversion/js-object-lua-ref-cache.hpp"
+#include "conversion/js-to-lua-converter.h"
+#include "core/lua-state-core.h"
+#include "runtime/lua-js-runtime.h"
 
 JsToLuaConverter::JsToLuaConverter(LuaStateCore& core) : core_(core) {
   lua_refs_.reserve(32);
@@ -136,21 +136,20 @@ void JsToLuaConverter::PushObject(const Napi::Object& object) {
     objects_queue_.pop_back();
 
     LuaRegistryRef current_ref;
-    bool ok = visited_->TryGet(current_frame.obj, current_ref);
-    assert(ok);
+    visited_->TryGet(current_frame.obj, current_ref);
 
     core_.PushRef(current_ref);
 
     if (current_frame.is_array) {
       Napi::Array array = current_frame.obj.As<Napi::Array>();
 
-      for (uint32_t i = 0; i < current_frame.length; ++i) {
+      for (int i = 0; i < current_frame.length; ++i) {
         Napi::Value array_item = array.Get(i);
         push_value(array_item);
         core_.SetIndex(-2, i + 1);
       }
     } else {
-      for (uint32_t i = 0; i < current_frame.length; ++i) {
+      for (int i = 0; i < current_frame.length; ++i) {
         Napi::Value prop_name = current_frame.props.Get(i);
         Napi::Value prop_value = current_frame.obj.Get(prop_name);
 

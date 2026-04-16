@@ -3,7 +3,7 @@
 #include <napi.h>
 #include <unordered_map>
 
-#include "lua-values.h"
+#include "core/lua-values.h"
 
 #define MAX_VECTOR_SIZE 16
 

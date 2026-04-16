@@ -10,17 +10,18 @@
         "enable_debug%" : "false"
       },
       "include_dirs": [
+        "src",
         "<@(lua_include_dirs)"
       ],
       "sources": [
         "<@(lua_sources)",
-        "src/init.cpp",
-        "src/js-to-lua-converter.cpp",
-        "src/lua-error.cpp",
-        "src/lua-js-runtime.cpp",
-        "src/lua-state-core.cpp",
-        "src/lua-state.cpp",
-        "src/lua-to-js-converter.cpp"
+        "src/conversion/js-to-lua-converter.cpp",
+        "src/conversion/lua-to-js-converter.cpp",
+        "src/core/lua-state-core.cpp",
+        "src/napi/init.cpp",
+        "src/napi/lua-error.cpp",
+        "src/napi/lua-state.cpp",
+        "src/runtime/lua-js-runtime.cpp"
       ],
       "libraries": [
         "<@(lua_libraries)"

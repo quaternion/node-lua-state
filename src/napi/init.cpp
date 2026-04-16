@@ -1,8 +1,8 @@
 #include <napi.h>
 
-#include "js-object-lua-ref-cache.hpp"
-#include "lua-error.h"
-#include "lua-state.h"
+#include "conversion/js-object-lua-ref-cache.hpp"
+#include "napi/lua-error.h"
+#include "napi/lua-state.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   LuaError::NapiInit(env, exports);

@@ -2,8 +2,8 @@
 
 #include <napi.h>
 
-#include "lua-js-runtime.h"
 #include "napi/napi-string-buffer.h"
+#include "runtime/lua-js-runtime.h"
 
 class LuaState : public Napi::ObjectWrap<LuaState> {
 public:

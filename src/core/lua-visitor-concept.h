@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "lua-values.h"
+#include "core/lua-values.h"
 
 template <typename T>
 concept LuaVisitor = requires(T v) {

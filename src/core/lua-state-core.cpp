@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lua-compat-defines.h"
-#include "lua-state-core.h"
+#include "core/lua-compat-defines.h"
+#include "core/lua-state-core.h"
 
 extern "C" {
 #include <lauxlib.h>
