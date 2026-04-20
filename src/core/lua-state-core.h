@@ -75,7 +75,7 @@ public:
 
 private:
   lua_State* L_;
-  bool closed_;
+  bool is_closed_ = false;
 
   template <LuaVisitor Visitor> void TraverseTable(int index, Visitor& visitor);
 };

@@ -22,21 +22,21 @@ namespace {
 /**
  * Constructor
  */
-LuaStateCore::LuaStateCore() : L_(luaL_newstate()), closed_(false) {}
+LuaStateCore::LuaStateCore() : L_(luaL_newstate()) {}
 
 /**
  * Destructor
  */
 LuaStateCore::~LuaStateCore() { Close(); }
 
-bool LuaStateCore::IsClosed() { return closed_; }
+bool LuaStateCore::IsClosed() { return is_closed_; }
 
 void LuaStateCore::Close() {
-  if (closed_) {
+  if (is_closed_) {
     return;
   }
 
-  closed_ = true;
+  is_closed_ = true;
   lua_close(L_);
   L_ = nullptr;
 }

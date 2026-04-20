@@ -1,9 +1,18 @@
 #include <napi.h>
 #include <variant>
 
+#include "lua-state.h"
 #include "napi/lua-state.h"
 #include "napi/napi-string-buffer.h"
 #include "runtime/lua-config.h"
+
+#define RETURN_IF_CLOSED(env)                                                                                                                                  \
+  if (runtime_->IsClosed()) [[unlikely]] {                                                                                                                     \
+    auto err = Napi::Error::New(env, "LuaState is closed");                                                                                                    \
+    err.Set("code", "ERR_LUA_STATE_CLOSED");                                                                                                                   \
+    err.ThrowAsJavaScriptException();                                                                                                                          \
+    return env.Undefined();                                                                                                                                    \
+  }
 
 /**
  * Napiapi Initializer
@@ -38,7 +47,7 @@ LuaState::LuaState(const Napi::CallbackInfo& info) : Napi::ObjectWrap<LuaState>(
  * Close
  */
 Napi::Value LuaState::Close(const Napi::CallbackInfo& info) {
-  // runtime_->core_.Close();
+  runtime_->Close();
   return info.Env().Undefined();
 }
 
@@ -47,6 +56,8 @@ Napi::Value LuaState::Close(const Napi::CallbackInfo& info) {
  */
 Napi::Value LuaState::EvalLuaFile(const Napi::CallbackInfo& info) {
   auto env = info.Env();
+
+  RETURN_IF_CLOSED(env)
 
   if (info.Length() < 1 || !info[0].IsString()) {
     Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
@@ -63,6 +74,8 @@ Napi::Value LuaState::EvalLuaFile(const Napi::CallbackInfo& info) {
 Napi::Value LuaState::EvalLuaString(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
+  RETURN_IF_CLOSED(env)
+
   if (info.Length() < 1 || !info[0].IsString()) {
     Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
     return env.Undefined();
@@ -78,6 +91,8 @@ Napi::Value LuaState::EvalLuaString(const Napi::CallbackInfo& info) {
  */
 Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
   auto env = info.Env();
+
+  RETURN_IF_CLOSED(env)
 
   if (info.Length() < 1 || !info[0].IsString()) {
     Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
@@ -97,6 +112,8 @@ Napi::Value LuaState::GetLuaGlobalValue(const Napi::CallbackInfo& info) {
 Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
   auto env = info.Env();
 
+  RETURN_IF_CLOSED(env)
+
   if (info.Length() < 1 || !info[0].IsString()) {
     Napi::TypeError::New(env, "String argument expected").ThrowAsJavaScriptException();
     return env.Undefined();
@@ -114,6 +131,9 @@ Napi::Value LuaState::GetLuaValueLength(const Napi::CallbackInfo& info) {
  */
 Napi::Value LuaState::GetLuaVersion(const Napi::CallbackInfo& info) {
   auto env = info.Env();
+
+  RETURN_IF_CLOSED(env)
+
   auto version = runtime_->GetLuaVersion();
   return Napi::String::New(env, version);
 }
@@ -123,6 +143,8 @@ Napi::Value LuaState::GetLuaVersion(const Napi::CallbackInfo& info) {
  */
 Napi::Value LuaState::SetLuaGlobalValue(const Napi::CallbackInfo& info) {
   auto env = info.Env();
+
+  RETURN_IF_CLOSED(env)
 
   if (info.Length() < 2 || !info[0].IsString()) {
     Napi::TypeError::New(env, "First argument expected string").ThrowAsJavaScriptException();

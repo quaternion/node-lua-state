@@ -8,6 +8,7 @@
 #include "runtime/lua-js-runtime.h"
 
 extern "C" {
+#include "lua-js-runtime.h"
 #include <lua.h>
 }
 
@@ -32,6 +33,10 @@ LuaJsRuntime::~LuaJsRuntime() {
   lua_fn_proxies_.clear();
   core_.Close();
 }
+
+void LuaJsRuntime::Close() { core_.Close(); }
+
+bool LuaJsRuntime::IsClosed() { return core_.IsClosed(); }
 
 std::string LuaJsRuntime::GetLuaVersion() { return core_.GetLuaVersion(); }
 
@@ -131,7 +136,7 @@ Napi::Function LuaJsRuntime::CreateJsProxyFunction(const Napi::Env& env, const L
   // create javascript function
   auto js_fn = Napi::Function::New(env, [weak_runtime, lua_fn_ref](const Napi::CallbackInfo& info) {
     auto runtime = weak_runtime.lock();
-    if (!runtime) {
+    if (!runtime || runtime->IsClosed()) {
       return info.Env().Undefined();
     }
 
@@ -151,7 +156,7 @@ Napi::Function LuaJsRuntime::CreateJsProxyFunction(const Napi::Env& env, const L
     [](Napi::Env, FinalizerCtx* finalizer_ctx) {
       auto runtime = finalizer_ctx->weak_runtime.lock();
       // if runtime destroyed then LuaStateCore also destroyed with Lua VM and all refs
-      if (runtime) {
+      if (runtime && !runtime->IsClosed()) {
         runtime->FinalizeFunctionProxy(finalizer_ctx->fn_identity, finalizer_ctx->fn_ref);
       }
       delete finalizer_ctx;

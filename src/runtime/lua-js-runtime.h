@@ -18,6 +18,9 @@ public:
   explicit LuaJsRuntime(const LuaConfig& cfg);
   ~LuaJsRuntime();
 
+  void Close();
+  bool IsClosed();
+
   std::string GetLuaVersion();
 
   // Evaluation
