@@ -40,6 +40,8 @@ const lua = new LuaState();
 lua.setGlobal("x", 10);
 const result = lua.eval("return x * 2");
 console.log(result); // 20
+
+lua.close();
 ```
 
 Lua runs synchronously in the same thread as Node.js and blocks the event loop during execution. This means long-running Lua code will block all JavaScript execution.
@@ -202,6 +204,13 @@ new LuaState(options?: {
 | `getGlobal(path)`        | `LuaValue \| null \| undefined` | Get global value    |
 | `getLength(path)`        | `number \| null \| undefined`   | Get length of table |
 | `getVersion()`           | `string`                        | Get Lua version     |
+| `close()`                | `void`                          | Close Lua VM        |
+
+> ⚠️ **Note on `close()`:**  
+> Lua VM memory is not managed by the JavaScript garbage collector.  
+> It is recommended to call `close()` when the instance is no longer needed to avoid holding native memory.  
+> Calling `close()` multiple times has no effect.  
+> Any method call after `close()` will throw an error.
 
 ### `LuaError` Class
 
