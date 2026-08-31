@@ -2,6 +2,7 @@
   "recommendations": [
     "biomejs.biome",
     "esbenp.prettier-vscode",
-    "ms-vscode.cpptools"
+    "ms-vscode.cpptools",
+    "ms-vscode-remote.remote-containers"
   ]
 }
