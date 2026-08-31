@@ -19,6 +19,10 @@ public:
 
     map_get_ = Napi::Persistent(map_proto.Get("get").As<Napi::Function>());
     map_set_ = Napi::Persistent(map_proto.Get("set").As<Napi::Function>());
+
+    map_ctor_.SuppressDestruct();
+    map_get_.SuppressDestruct();
+    map_set_.SuppressDestruct();
   }
 
   inline bool TryGet(const Napi::Object& key, LuaRegistryRef& out_ref) {
