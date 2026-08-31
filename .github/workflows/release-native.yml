@@ -21,7 +21,7 @@ jobs:
     name: Get Native Info
     runs-on: ubuntu-22.04
     outputs:
-      native_version: ${{ steps.read_package.outputs.native_version }}      
+      native_version: ${{ steps.read_package.outputs.native_version }}
       should_build: ${{ steps.set_should_build.outputs.result }}
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
     needs: native_info
     if: needs.native_info.outputs.should_build == 'true'
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
