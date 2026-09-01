@@ -111,7 +111,6 @@ rather than `npx lua-state install`, as npx may trigger duplicate builds. See th
 2. **Make changes** following the code style and guidelines
 
 3. **Test thoroughly**:
-
    - Run `npm run test` to ensure all tests pass
    - Run `npm run lint` to check code quality
    - Run `npm run bench` to verify performance
@@ -140,11 +139,10 @@ Follow conventional commit format:
 
 ## Code Guidelines
 
-### TypeScript
+### Types
 
-- Use TypeScript for all new code
-- Provide proper type annotations
-- Type definitions live in `types/` and are published with the package.
+- New code is JavaScript (CJS) or C++ (in src/); there is no TypeScript build step
+- Type definitions are hand-maintained in types/ and published with the package - keep them in sync with API changes
 
 ### C++ Code
 
@@ -154,7 +152,7 @@ Follow conventional commit format:
 
 ### JavaScript/Node.js
 
-- This project uses CommonJS; avoid ESM imports unless necessary.
+- Entry points are published as both CJS (`js/index.js`) and ESM (`js/index.mjs`) wrappers
 - Follow Node.js best practices
 - Handle errors properly with detailed messages
 
@@ -190,4 +188,4 @@ By contributing, you agree that your contributions will be licensed under the sa
 - Join discussions in GitHub issues
 - Ask questions in pull request comments
 
-Thank you for contributing to lua-state! 🎉
+Thank you for contributing to lua-state!
