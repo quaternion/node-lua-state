@@ -1,2 +1,10 @@
-import './lua-state-native.module'
-export * from 'lua-state.node'
+export {
+  LuaError,
+  type LuaFunction,
+  type LuaLibName,
+  type LuaPrimitive,
+  LuaState,
+  type LuaStateOptions,
+  type LuaTable,
+  type LuaValue,
+} from './lua-state'
