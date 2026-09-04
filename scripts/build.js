@@ -8,7 +8,7 @@ const logger = require('../build-tools/logger')
 const { NativeRelease, Binary } = require('../build-tools/config')
 const { fetchTarball } = require('../build-tools/artifact')
 
-async function install(luaVersion = LuaEnv.version) {
+async function build(luaVersion = LuaEnv.version) {
   try {
     LuaEnv.validate()
   } catch (error) {
@@ -179,13 +179,13 @@ if (require.main === module) {
     process.exit(130)
   })
 
-  install()
+  build()
     .then((res) => {
       if (res) {
-        logger.log(`Install successfully.`)
+        logger.log(`Build successfully.`)
         process.exitCode = 0
       } else {
-        logger.log(`Install failed.`)
+        logger.log(`Build failed.`)
         process.exitCode = 1
       }
     })

@@ -278,11 +278,11 @@ const numberValue = lua.eval<number>("return 42"); // number
 ## 🧰 CLI <a id="cli"></a>
 
 <details>
-<summary><strong><code>install</code></strong></summary>
+<summary><strong><code>build</code></strong></summary>
 If you need to rebuild with a different Lua version or use your system Lua installation, you can do it with the included CLI tool:
 
 ```bash
-npx lua-state install [options]
+npx lua-state build [options]
 ```
 
 **Options:**
@@ -300,16 +300,16 @@ The build system is based on node-gyp and supports flexible integration with exi
 
 ```bash
 # Rebuild with Lua 5.2.4
-npx lua-state install --force --version=5.2.4
+npx lua-state build --force --version=5.2.4
 
 # Rebuild with system Lua
-npx lua-state install --force --mode=system --libraries=-llua5.4 --include-dirs=/usr/include/lua5.4
+npx lua-state build --force --mode=system --libraries=-llua5.4 --include-dirs=/usr/include/lua5.4
 
 # Rebuild with system or prebuilt LuaJIT
-npx lua-state install --force --mode=system --libraries=-lluajit-5.1 --include-dirs=/usr/include/luajit-2.1
+npx lua-state build --force --mode=system --libraries=-lluajit-5.1 --include-dirs=/usr/include/luajit-2.1
 
 # Rebuild with custom lua sources
-npx lua-state install --force --mode=source --source-dir=deps/lua-5.1/src
+npx lua-state build --force --mode=source --source-dir=deps/lua-5.1/src
 ```
 
 > ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).

@@ -12,17 +12,17 @@ const program = new Command()
 program.name('lua-state').version(pkg.version)
 
 program
-  .command('install')
-  .description('Install or rebuild Lua for this package')
+  .command('build')
+  .description('Build the native module for this package')
   .addOption(
-    new Option('-m, --mode <mode>', 'Installation mode')
+    new Option('-m, --mode <mode>', 'Build mode')
       .default('download')
       .choices(['download', 'system', 'source']),
   )
   .option('-f, --force', 'Force rebuild even if already installed', false)
   .option(
     '-v, --version <version>',
-    'Lua version to install in download mode (e.g. 5.4.8)',
+    'Lua version to build in download mode (e.g. 5.4.8)',
   )
   .option(
     '--download-dir <path>',
@@ -67,14 +67,9 @@ program
       }
     }
 
-    const installScriptPath = path.resolve(
-      __dirname,
-      '..',
-      'scripts',
-      'install.js',
-    )
+    const buildScriptPath = path.resolve(__dirname, '..', 'scripts', 'build.js')
 
-    const result = spawnSync('node', [installScriptPath], {
+    const result = spawnSync('node', [buildScriptPath], {
       stdio: 'inherit',
       env: process.env,
     })
