@@ -1,4 +1,5 @@
 const { spawnSync } = require('node:child_process')
+const fs = require('node:fs')
 const path = require('node:path')
 
 const { LuaEnv, LuaStateEnv } = require('../build-tools/env')
@@ -21,7 +22,7 @@ async function install(luaVersion = LuaEnv.version) {
   if (!LuaStateEnv.forceBuild) {
     const prepared = await prepareBinary({ luaMode, luaVersion })
     if (prepared) {
-      return true
+      return LuaStateEnv.out ? copyBinary(LuaStateEnv.out) : true
     }
     logger.log('No prebuilt binary found, falling back to build...')
   }
@@ -43,7 +44,8 @@ async function install(luaVersion = LuaEnv.version) {
   }
 
   logger.log('Built successfully.')
-  return true
+
+  return LuaStateEnv.out ? copyBinary(LuaStateEnv.out) : true
 }
 
 async function prepareSources({ luaMode, luaVersion }) {
@@ -155,6 +157,20 @@ function runNodeGyp(args = []) {
   }
 
   return spawnResult.status === 0
+}
+
+function copyBinary(destPath) {
+  const destDir = path.dirname(destPath)
+
+  try {
+    fs.mkdirSync(destDir, { recursive: true })
+    fs.copyFileSync(Binary.path, destPath)
+    logger.log(`Binary copied to ${destPath}`)
+    return true
+  } catch (err) {
+    logger.error(`Failed to copy binary to ${destPath}: ${err.message}`)
+    return false
+  }
 }
 
 if (require.main === module) {

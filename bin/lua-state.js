@@ -43,6 +43,11 @@ program
     '--libraries <libs>',
     'Library files or names for system Lua (space-separated)',
   )
+  .option(
+    '--out <path>',
+    'Copy the built binary to this path (parent directories are created)',
+    resolvePath,
+  )
   .action((options) => {
     const optionsToEnvMap = {
       mode: 'LUA_STATE_MODE',
@@ -52,6 +57,7 @@ program
       sourceDir: 'LUA_SOURCE_DIR',
       includeDirs: 'LUA_INCLUDE_DIRS',
       libraries: 'LUA_LIBRARIES',
+      out: 'LUA_STATE_OUT',
     }
 
     for (const [key, value] of Object.entries(options)) {
