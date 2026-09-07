@@ -48,6 +48,10 @@ const LuaStateEnv = {
   get out() {
     return getEnvVariable('LUA_STATE_OUT')
   },
+
+  get prebuild() {
+    return getEnvVariable('LUA_STATE_PREBUILD')
+  },
 }
 
 const LuaBuildEnv = {

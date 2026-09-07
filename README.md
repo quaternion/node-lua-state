@@ -14,6 +14,7 @@ Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Creat
   <a href="#api-reference">API</a> •
   <a href="#type-mapping">Mapping</a> •
   <a href="#cli">CLI</a> •
+  <a href="#downstream">Downstream Packages</a> •
   <a href="#performance">Performance</a>
 </p>
 
@@ -295,12 +296,23 @@ The build system is based on node-gyp and supports flexible integration with exi
 | `-f, --force`                                   | Force rebuild                             | `false`    |
 | `-v, --version`                                 | Lua version for `download` build          | `5.4.8`    |
 | `--source-dir`, `--include-dirs`, `--libraries` | Custom paths for `source`/`system` builds | -          |
+| `--prebuild [path]`                             | Build into standard `prebuilds/` layout   | -          |
+| `--out <path>`                                  | Copy binary to an exact path (low-level)  | -          |
 
 **Examples:**
 
 ```bash
 # Rebuild with Lua 5.2.4
 npx lua-state build --force --version=5.2.4
+
+# Build into prebuilds/ structure for the current platform
+npx lua-state build --mode=source --source-dir=deps/lua-5.2.1/src --prebuild
+
+# Build into a custom base directory (instead of cwd)
+npx lua-state build --mode=source --source-dir=deps/lua-5.2.1/src --prebuild ./dist
+
+# Copy binary to an exact path
+npx lua-state build --out ./prebuilds/linux-x64/lua-state.glibc.node
 
 # Rebuild with system Lua
 npx lua-state build --force --mode=system --libraries=-llua5.4 --include-dirs=/usr/include/lua5.4
@@ -311,6 +323,8 @@ npx lua-state build --force --mode=system --libraries=-lluajit-5.1 --include-dir
 # Rebuild with custom lua sources
 npx lua-state build --force --mode=source --source-dir=deps/lua-5.1/src
 ```
+
+> 💡 `--prebuild` generates the standard `prebuilds/{platform}-{arch}/lua-state[.glibc|.musl].node` path for the current platform (Linux binaries get a `glibc`/`musl` tag). The result is compatible with `node-gyp-build` and `prebuildify`. Has priority over `--out`.
 
 > ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).
 
@@ -354,6 +368,57 @@ npx lua-state run --sandbox strict script.lua
 
 </details>
 
+## 📦 Downstream Packages <a id="downstream"></a>
+
+If your package embeds `lua-state` (e.g. it needs a custom Lua version), you can keep it as a `devDependency` and ship your own binary + types — without pulling `lua-state` into the runtime dependency tree.
+
+### Building the binary
+
+Use the `build` command with `--prebuild` to compile lua-state against your Lua of choice and output the standard `prebuilds/` layout for the current platform:
+
+```json
+{
+  "scripts": {
+    "build:lua": "lua-state build --mode=source --source-dir=deps/lua-5.2.1/src --prebuild"
+  }
+}
+```
+
+This produces `prebuilds/{platform}-{arch}/lua-state[.glibc|.musl].node`, compatible with what `node-gyp-build` expects at load time.
+
+### Loading the binary and forwarding types
+
+`node-gyp-build` returns `any`, so forward the copied declarations to keep full typing. Wire everything through a `src/lua-state/` module:
+
+```
+src/lua-state/
+├── lua-state.d.ts   # copied from lua-state types
+└── index.ts         # loads the binary + forwards types
+```
+
+**1.** Copy the self-contained declarations (the main case is `lua-state` in `devDependencies`):
+
+```bash
+cp node_modules/lua-state/types/lua-state.d.ts src/lua-state/
+```
+
+**2.** Load the binary and cast it to the module's shape (`path.resolve(__dirname, '..', '..')` is the package root where `node-gyp-build` looks for `prebuilds/`):
+
+```ts
+// src/lua-state/index.ts
+const path = require('node:path')
+
+const binding = require('node-gyp-build')(path.resolve(__dirname, '..', '..')) as typeof import('./lua-state')
+
+export const LuaState = binding.LuaState
+export const LuaError = binding.LuaError
+export type * from './lua-state'
+```
+
+Consumers get a fully typed API: `import { LuaState, LuaError, type LuaStateOptions } from '../lua-state'`.
+
+For distributing a single consolidated `.d.ts`, pipe the declarations through `@microsoft/api-extractor`.
+
 ## 🌍 Environment Variables
 
 These variables can be used for CI/CD or custom build scripts.
@@ -366,6 +431,8 @@ These variables can be used for CI/CD or custom build scripts.
 | `LUA_SOURCE_DIR`        | Lua source path (for `source` mode)         | -          |
 | `LUA_INCLUDE_DIRS`      | Include directories (for `system` mode)     | -          |
 | `LUA_LIBRARIES`         | Library paths (for `system` mode)           | -          |
+| `LUA_STATE_PREBUILD`    | Build into standard `prebuilds/` layout     | -          |
+| `LUA_STATE_OUT`         | Copy binary to an exact path (low-level)    | -          |
 
 ## 🔍 Compared to other bindings
 

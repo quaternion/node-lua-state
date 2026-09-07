@@ -48,6 +48,11 @@ program
     'Copy the built binary to this path (parent directories are created)',
     resolvePath,
   )
+  .option(
+    '--prebuild [path]',
+    'Build into standard prebuilds/ layout for the current platform (default: cwd)',
+    resolvePath,
+  )
   .action((options) => {
     const optionsToEnvMap = {
       mode: 'LUA_STATE_MODE',
@@ -58,6 +63,7 @@ program
       includeDirs: 'LUA_INCLUDE_DIRS',
       libraries: 'LUA_LIBRARIES',
       out: 'LUA_STATE_OUT',
+      prebuild: 'LUA_STATE_PREBUILD',
     }
 
     for (const [key, value] of Object.entries(options)) {

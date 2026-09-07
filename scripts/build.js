@@ -2,7 +2,7 @@ const { spawnSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const { LuaEnv, LuaStateEnv } = require('../build-tools/env')
+const { LuaBuildEnv, LuaEnv, LuaStateEnv } = require('../build-tools/env')
 const { OfficialLuaSource, DirLuaSource } = require('../build-tools/lua-source')
 const logger = require('../build-tools/logger')
 const { NativeRelease, Binary } = require('../build-tools/config')
@@ -19,10 +19,12 @@ async function build(luaVersion = LuaEnv.version) {
   const luaMode = LuaStateEnv.mode
   logger.log(`Mode "${luaMode}"`)
 
+  const dest = binaryDest()
+
   if (!LuaStateEnv.forceBuild) {
     const prepared = await prepareBinary({ luaMode, luaVersion })
     if (prepared) {
-      return LuaStateEnv.out ? copyBinary(LuaStateEnv.out) : true
+      return dest ? copyBinary(dest) : true
     }
     logger.log('No prebuilt binary found, falling back to build...')
   }
@@ -45,7 +47,25 @@ async function build(luaVersion = LuaEnv.version) {
 
   logger.log('Built successfully.')
 
-  return LuaStateEnv.out ? copyBinary(LuaStateEnv.out) : true
+  return dest ? copyBinary(dest) : true
+}
+
+function binaryDest() {
+  if (LuaStateEnv.prebuild) {
+    const baseDir = ['1', 'true'].includes(LuaStateEnv.prebuild)
+      ? process.cwd()
+      : LuaStateEnv.prebuild
+    const libcTag =
+      LuaBuildEnv.platform === 'linux' ? `.${LuaBuildEnv.family}` : ''
+    return path.join(
+      baseDir,
+      'prebuilds',
+      `${LuaBuildEnv.platform}-${LuaBuildEnv.arch}`,
+      `lua-state${libcTag}.node`,
+    )
+  }
+
+  return LuaStateEnv.out
 }
 
 async function prepareSources({ luaMode, luaVersion }) {
