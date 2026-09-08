@@ -290,14 +290,14 @@ npx lua-state build [options]
 
 The build system is based on node-gyp and supports flexible integration with existing Lua installations.
 
-| Option                                          | Description                                 | Default    |
-| ----------------------------------------------- | ------------------------------------------- | ---------- |
-| `-m, --mode`                                    | `download`, `official`, `source`, `system`  | `download` |
-| `--skip-if-exists`                              | Skip build if a binary already exists       | `false`    |
-| `-v, --version`                                 | Lua version for `download` build            | `5.4.8`    |
-| `--source-dir`, `--include-dirs`, `--libraries` | Custom paths for `source`/`system` builds   | -          |
-| `--prebuild [path]`                             | Build into standard `prebuilds/` layout     | -          |
-| `--out <path>`                                  | Copy binary to an exact path (low-level)    | -          |
+| Option                                          | Description                                | Default    |
+| ----------------------------------------------- | ------------------------------------------ | ---------- |
+| `-m, --mode`                                    | `download`, `official`, `source`, `system` | `download` |
+| `--skip-if-exists`                              | Skip build if a binary already exists      | `false`    |
+| `-v, --version`                                 | Lua version for `download` build           | `5.4.8`    |
+| `--source-dir`, `--include-dirs`, `--libraries` | Custom paths for `source`/`system` builds  | -          |
+| `--prebuild [path]`                             | Build into standard `prebuilds/` layout    | -          |
+| `--out <path>`                                  | Copy binary to an exact path (low-level)   | -          |
 
 **Examples:**
 
@@ -331,7 +331,7 @@ npx lua-state build --skip-if-exists
 
 > 💡 By default `build` always produces a fresh binary. `--skip-if-exists` only skips the rebuild when `build/Release/lua-state.node` is already present; `--out`/`--prebuild` still copy the existing binary.
 
-> 💡 In `download` mode, if no prebuilt binary exists for your platform/architecture/Lua version, the build automatically falls back to `official` mode — it downloads the matching Lua sources and compiles them (requires a C++ toolchain).
+> 💡 In `download` mode, if no prebuilt binary exists for your platform/architecture/Lua version, the build automatically falls back to `official` mode - it downloads the matching Lua sources and compiles them (requires a C++ toolchain).
 
 > ⚠️ **Note:** LuaJIT builds are only supported in `system` mode (cannot be built from source).
 
@@ -377,7 +377,9 @@ npx lua-state run --sandbox strict script.lua
 
 ## 📦 Downstream Packages <a id="downstream"></a>
 
-If your package embeds `lua-state` (e.g. it needs a custom Lua version), you can keep it as a `devDependency` and ship your own binary + types - without pulling `lua-state` into the runtime dependency tree.
+Most downstream packages use `lua-state` only during the build - to generate schemas, serialize data, or run code-generation against the Lua runtime - so install it as a `devDependency`. Nothing native ships to consumers: the published artifact is plain generated output, with no binary and no runtime dependency on `lua-state`.
+
+If your deliverable also embeds the binary at runtime (e.g. a custom Lua version), follow the steps below: build with `--prebuild`, load through `node-gyp-build`, and forward the copied types.
 
 ### Building the binary
 
@@ -455,16 +457,16 @@ For distributing a single consolidated `.d.ts`, pipe the declarations through `@
 
 These variables can be used for CI/CD or custom build scripts.
 
-| Variable                  | Description                                    | Default    |
-| ------------------------- | ---------------------------------------------- | ---------- |
-| `LUA_STATE_MODE`          | Build mode (`download`, `official`, `source`, `system`) | `download` |
-| `LUA_STATE_SKIP_IF_EXISTS`| Skip build if binary already exists            | `false`    |
-| `LUA_VERSION`             | Lua version (for `download` mode)              | `5.4.8`    |
-| `LUA_SOURCE_DIR`          | Lua source path (for `source` mode)            | -          |
-| `LUA_INCLUDE_DIRS`        | Include directories (for `system` mode)        | -          |
-| `LUA_LIBRARIES`           | Library paths (for `system` mode)              | -          |
-| `LUA_STATE_PREBUILD`      | Build into standard `prebuilds/` layout        | -          |
-| `LUA_STATE_OUT`           | Copy binary to an exact path (low-level)       | -          |
+| Variable                   | Description                                             | Default    |
+| -------------------------- | ------------------------------------------------------- | ---------- |
+| `LUA_STATE_MODE`           | Build mode (`download`, `official`, `source`, `system`) | `download` |
+| `LUA_STATE_SKIP_IF_EXISTS` | Skip build if binary already exists                     | `false`    |
+| `LUA_VERSION`              | Lua version (for `download` mode)                       | `5.4.8`    |
+| `LUA_SOURCE_DIR`           | Lua source path (for `source` mode)                     | -          |
+| `LUA_INCLUDE_DIRS`         | Include directories (for `system` mode)                 | -          |
+| `LUA_LIBRARIES`            | Library paths (for `system` mode)                       | -          |
+| `LUA_STATE_PREBUILD`       | Build into standard `prebuilds/` layout                 | -          |
+| `LUA_STATE_OUT`            | Copy binary to an exact path (low-level)                | -          |
 
 ## 🔍 Compared to other bindings
 
