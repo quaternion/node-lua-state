@@ -107,8 +107,7 @@ jobs:
           node-version: 24.10.0
       - name: Build
         env:
-          LUA_STATE_MODE: download
-          LUA_STATE_FORCE_BUILD: true
+          LUA_STATE_MODE: official
         run: |
           npm ci
       - name: Test

@@ -95,7 +95,7 @@ This helps ensure changes don't negatively impact performance.
 During local development, prefer running:
 
 ```bash
-./bin/lua-state.js build --force [options]
+./bin/lua-state.js build [options]
 ```
 
 rather than `npx lua-state build`, as npx may trigger duplicate builds. See the [README](README.md) for detailed build options.

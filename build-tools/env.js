@@ -35,14 +35,14 @@ const LuaStateEnv = {
     )
   },
 
-  get forceBuild() {
-    const forceBuild = getEnvVariable('LUA_STATE_FORCE_BUILD')
-    return ['1', 'true', 'yes', 'on', 'y'].includes(String(forceBuild).trim())
+  get skipIfExists() {
+    const skipIfExists = getEnvVariable('LUA_STATE_SKIP_IF_EXISTS')
+    return ['1', 'true', 'yes', 'on', 'y'].includes(String(skipIfExists).trim())
   },
 
   get debug() {
-    const forceBuild = getEnvVariable('LUA_STATE_DEBUG')
-    return ['1', 'true', 'yes', 'on', 'y'].includes(String(forceBuild).trim())
+    const debug = getEnvVariable('LUA_STATE_DEBUG')
+    return ['1', 'true', 'yes', 'on', 'y'].includes(String(debug).trim())
   },
 
   get out() {
@@ -84,14 +84,14 @@ const LuaEnv = {
   },
 
   validate() {
-    const allowedModes = new Set(['download', 'source', 'system'])
+    const allowedModes = new Set(['download', 'official', 'source', 'system'])
     const mode = LuaStateEnv.mode
 
     const errors = []
 
     if (!allowedModes.has(mode)) {
       errors.push(
-        `LUA_STATE_MODE must be one of: download, source, system (got: "${mode}")`,
+        `LUA_STATE_MODE must be one of: download, official, source, system (got: "${mode}")`,
       )
     }
 

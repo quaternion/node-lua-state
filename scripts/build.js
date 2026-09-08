@@ -21,12 +21,20 @@ async function build(luaVersion = LuaEnv.version) {
 
   const dest = binaryDest()
 
-  if (!LuaStateEnv.forceBuild) {
-    const prepared = await prepareBinary({ luaMode, luaVersion })
-    if (prepared) {
+  if (skipIfExists() && Binary.isExists) {
+    logger.log(`Binary already exists at ${Binary.path}, skipping build`)
+    return dest ? copyBinary(dest) : true
+  }
+
+  if (luaMode === 'download') {
+    const downloaded = await downloadPrebuilt({ luaVersion })
+    if (downloaded) {
+      logger.log(`Prebuilt binary for Lua ${luaVersion} downloaded and ready.`)
       return dest ? copyBinary(dest) : true
     }
-    logger.log('No prebuilt binary found, falling back to build...')
+    logger.log(
+      `No prebuilt binary for Lua ${luaVersion} on ${LuaBuildEnv.platform}-${LuaBuildEnv.arch}, falling back to an 'official' source build...`,
+    )
   }
 
   const sourcesPrepared = await prepareSources({ luaMode, luaVersion })
@@ -41,13 +49,17 @@ async function build(luaVersion = LuaEnv.version) {
       `--enable_debug=${LuaStateEnv.debug || false}`,
     ])
   ) {
-    logger.error('Built failed.')
+    logger.error('Build failed.')
     return false
   }
 
   logger.log('Built successfully.')
 
   return dest ? copyBinary(dest) : true
+}
+
+function skipIfExists() {
+  return LuaStateEnv.skipIfExists || process.argv.includes('--skip-if-exists')
 }
 
 function binaryDest() {
@@ -83,16 +95,7 @@ async function prepareSources({ luaMode, luaVersion }) {
   return await prepareOfficialLuaSources({ luaVersion })
 }
 
-async function prepareBinary({ luaMode, luaVersion }) {
-  if (Binary.isExists) {
-    logger.log(`Binary already exists at ${Binary.path}`)
-    return true
-  }
-
-  if (luaMode !== 'download') {
-    return false
-  }
-
+async function downloadPrebuilt({ luaVersion }) {
   const nativeRelease = NativeRelease({ luaVersion })
 
   try {
@@ -100,10 +103,9 @@ async function prepareBinary({ luaMode, luaVersion }) {
       `Trying to download prebuilt binary for lua ${luaVersion} from ${nativeRelease.url}...`,
     )
     await fetchTarball({ url: nativeRelease.url, destDir: Binary.dir })
-    logger.log(`Binary downloaded.`)
     return true
   } catch (err) {
-    logger.log(err?.message)
+    logger.error(`Prebuilt download failed: ${err?.message}`)
     return false
   }
 }
@@ -201,13 +203,7 @@ if (require.main === module) {
 
   build()
     .then((res) => {
-      if (res) {
-        logger.log(`Build successfully.`)
-        process.exitCode = 0
-      } else {
-        logger.log(`Build failed.`)
-        process.exitCode = 1
-      }
+      process.exitCode = res ? 0 : 1
     })
     .catch((err) => {
       logger.error(err?.message)

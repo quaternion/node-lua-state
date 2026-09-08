@@ -65,7 +65,7 @@
     "build": "node scripts/build.js",
     "format": "biome format --write .",
     "bench": "node --expose-gc --max-old-space-size=4096 scripts/bench.js",
-    "install": "node scripts/build.js",
+    "install": "node scripts/build.js --skip-if-exists",
     "lint": "biome check .",
     "test": "node --test tests/**/*.test.js"
   },

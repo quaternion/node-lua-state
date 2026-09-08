@@ -17,9 +17,13 @@ program
   .addOption(
     new Option('-m, --mode <mode>', 'Build mode')
       .default('download')
-      .choices(['download', 'system', 'source']),
+      .choices(['download', 'official', 'source', 'system']),
   )
-  .option('-f, --force', 'Force rebuild even if already installed', false)
+  .option(
+    '--skip-if-exists',
+    'Skip the build if a binary already exists (used by the npm install hook)',
+    false,
+  )
   .option(
     '-v, --version <version>',
     'Lua version to build in download mode (e.g. 5.4.8)',
@@ -56,7 +60,7 @@ program
   .action((options) => {
     const optionsToEnvMap = {
       mode: 'LUA_STATE_MODE',
-      force: 'LUA_STATE_FORCE_BUILD',
+      skipIfExists: 'LUA_STATE_SKIP_IF_EXISTS',
       downloadDir: 'LUA_STATE_DOWNLOAD_DIR',
       version: 'LUA_VERSION',
       sourceDir: 'LUA_SOURCE_DIR',
