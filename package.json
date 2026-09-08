@@ -2,7 +2,7 @@
   "name": "lua-state",
   "version": "1.2.0",
   "nativeVersion": "1.2.0",
-  "description": "Run real Lua (5.1-5.4 & LuaJIT) inside Node.js - native N-API bindings with prebuilt binaries and full TypeScript support.",
+  "description": "Native Lua & LuaJIT bindings for Node.js (5.1-5.5)",
   "keywords": [
     "lua",
     "luajit",
