@@ -370,7 +370,7 @@ npx lua-state run --sandbox strict script.lua
 
 ## 📦 Downstream Packages <a id="downstream"></a>
 
-If your package embeds `lua-state` (e.g. it needs a custom Lua version), you can keep it as a `devDependency` and ship your own binary + types — without pulling `lua-state` into the runtime dependency tree.
+If your package embeds `lua-state` (e.g. it needs a custom Lua version), you can keep it as a `devDependency` and ship your own binary + types - without pulling `lua-state` into the runtime dependency tree.
 
 ### Building the binary
 
@@ -386,7 +386,16 @@ Use the `build` command with `--prebuild` to compile lua-state against your Lua 
 
 This produces `prebuilds/{platform}-{arch}/lua-state[.glibc|.musl].node`, compatible with what `node-gyp-build` expects at load time.
 
-### Loading the binary and forwarding types
+### Loading the binary
+
+Since the generated layout matches what `node-gyp-build` expects, loading is a one-liner (`__dirname` is the package root where `package.json` and `prebuilds/` live):
+
+```js
+// index.js
+module.exports = require("node-gyp-build")(__dirname);
+```
+
+### Forwarding types (TypeScript)
 
 `node-gyp-build` returns `any`, so forward the copied declarations to keep full typing. Wire everything through a `src/lua-state/` module:
 
@@ -414,17 +423,19 @@ cp node_modules/lua-state/types/lua-state.d.ts src/lua-state/
 
 ```ts
 // src/lua-state/index.ts
-const path = require('node:path')
+const path = require("node:path");
 
-import type * as LuaTypes from './lua-state'
+import type * as LuaTypes from "./lua-state";
 
-const binding = require('node-gyp-build')(path.resolve(__dirname, '..', '..')) as typeof LuaTypes
+const binding = require("node-gyp-build")(
+  path.resolve(__dirname, "..", ".."),
+) as typeof LuaTypes;
 
-export const LuaState = binding.LuaState
-export const LuaError = binding.LuaError
-export type LuaState = LuaTypes.LuaState
-export type LuaError = LuaTypes.LuaError
-export type * from './lua-state'
+export const LuaState = binding.LuaState;
+export const LuaError = binding.LuaError;
+export type LuaState = LuaTypes.LuaState;
+export type LuaError = LuaTypes.LuaError;
+export type * from "./lua-state";
 ```
 
 The explicit `export type` aliases merge the class types with the local `const` exports; `export type *` forwards the remaining type-only exports (`LuaStateOptions`, `LuaPrimitive`, `LuaValue`, `LuaFunction`, `LuaTable`, `LuaLibName`).
