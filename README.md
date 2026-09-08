@@ -383,15 +383,17 @@ If your deliverable also embeds the binary at runtime (e.g. a custom Lua version
 
 ### Building the binary
 
-Use the `build` command with `--prebuild` to compile lua-state against your Lua of choice and output the standard `prebuilds/` layout for the current platform:
+Use the `build` command with `--prebuild` to compile a specific Lua version from official sources into the standard `prebuilds/` layout for the current platform:
 
 ```json
 {
   "scripts": {
-    "build:lua": "lua-state build --mode=source --source-dir=deps/lua-5.2.1/src --prebuild"
+    "build:lua": "lua-state build --mode=official --version=5.2.1 --prebuild"
   }
 }
 ```
+
+For a vendored/patched Lua source tree use `--mode=source --source-dir=deps/lua-5.2.1/src`; LuaJIT requires `--mode=system` (see [CLI](#cli) notes).
 
 This produces `prebuilds/{platform}-{arch}/lua-state[.glibc|.musl].node`, compatible with what `node-gyp-build` expects at load time.
 
