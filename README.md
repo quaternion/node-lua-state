@@ -402,18 +402,32 @@ src/lua-state/
 cp node_modules/lua-state/types/lua-state.d.ts src/lua-state/
 ```
 
+> ⚠️ `tsc` does not emit `.d.ts` files, so copy the declaration into your build output as well. Otherwise `export type * from './lua-state'` breaks for consumers of the published package:
+
+```json
+"scripts": {
+  "build": "tsc && cp src/lua-state/lua-state.d.ts dist/lua-state/"
+}
+```
+
 **2.** Load the binary and cast it to the module's shape (`path.resolve(__dirname, '..', '..')` is the package root where `node-gyp-build` looks for `prebuilds/`):
 
 ```ts
 // src/lua-state/index.ts
 const path = require('node:path')
 
-const binding = require('node-gyp-build')(path.resolve(__dirname, '..', '..')) as typeof import('./lua-state')
+import type * as LuaTypes from './lua-state'
+
+const binding = require('node-gyp-build')(path.resolve(__dirname, '..', '..')) as typeof LuaTypes
 
 export const LuaState = binding.LuaState
 export const LuaError = binding.LuaError
+export type LuaState = LuaTypes.LuaState
+export type LuaError = LuaTypes.LuaError
 export type * from './lua-state'
 ```
+
+The explicit `export type` aliases merge the class types with the local `const` exports; `export type *` forwards the remaining type-only exports (`LuaStateOptions`, `LuaPrimitive`, `LuaValue`, `LuaFunction`, `LuaTable`, `LuaLibName`).
 
 Consumers get a fully typed API: `import { LuaState, LuaError, type LuaStateOptions } from '../lua-state'`.
 
