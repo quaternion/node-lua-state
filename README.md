@@ -1,10 +1,10 @@
-# lua-state - Native Lua & LuaJIT bindings for Node.js
-
-Embed real Lua (5.1-5.5) and LuaJIT in Node.js with native N-API bindings. Create Lua VMs, execute code, share values between languages - no compiler required when using prebuilt binaries.
+# lua-state
 
 [![npm](https://img.shields.io/npm/v/lua-state.svg)](https://www.npmjs.com/package/lua-state)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Native Lua & LuaJIT bindings for Node.js. Create Lua VMs, execute code, share values between languages - no compiler required when using prebuilt binaries.
 
 <p align="center">
   <a href="#features">Features</a> •
