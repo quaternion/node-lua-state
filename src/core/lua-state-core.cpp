@@ -221,7 +221,8 @@ std::string LuaStateCore::GetLuaVersion() {
 #endif
 
   lua_getglobal(L_, "_VERSION");
-  std::string runtime = lua_tostring(L_, -1);
+  const char* version_ptr = lua_tostring(L_, -1);
+  const std::string runtime = version_ptr ? version_ptr : compileTime;
   lua_pop(L_, 1);
 
   if (runtime == compileTime || compileTime.find(runtime) != std::string::npos) {
