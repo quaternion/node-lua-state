@@ -179,7 +179,7 @@ All Lua operations in `lua-state` are **synchronous** by design. The Lua VM runs
 - Lua **coroutines** work normally _within_ Lua, but are **not integrated** with the JavaScript event loop
 - Asynchronous bridging between JS and Lua is intentionally avoided to keep the API simple, deterministic, and predictable.
 
-> ⚠️ **Note**: Lua 5.1 and LuaJIT have a small internal C stack, which may cause stack overflows when calling JS functions in very deep loops. Lua 5.1.1+ uses a larger stack and does not have this limitation.
+> ⚠️ **Note**: Lua limits the depth of nested C calls (`LUAI_MAXCCALLS`, default 200) in every supported Lua version and in LuaJIT. Deeply recursive chains of JS↔Lua calls (e.g. a Lua function calling a JS function that calls back into Lua) can hit this limit and raise Lua's `stack overflow` error — regardless of the Lua version used.
 
 ## 🧩 API Reference <a id="api-reference"></a>
 
@@ -194,6 +194,8 @@ new LuaState(options?: {
 ```
 
 **Available libraries:** `base`, `bit32`, `coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table`, `utf8`
+
+> 💡 Library availability depends on the Lua version: `bit32` is available in Lua 5.2–5.3, `utf8` in Lua 5.3+, and in Lua 5.1 `coroutine` is part of the `base` library. Unknown library names are silently ignored.
 
 **Methods**
 
@@ -295,6 +297,7 @@ The build system is based on node-gyp and supports flexible integration with exi
 | `-m, --mode`                                    | `download`, `official`, `source`, `system` | `download` |
 | `--skip-if-exists`                              | Skip build if a binary already exists      | `false`    |
 | `-v, --version`                                 | Lua version for `download` build           | `5.4.8`    |
+| `--download-dir <path>`                         | Directory to store downloaded sources      | npm cache  |
 | `--source-dir`, `--include-dirs`, `--libraries` | Custom paths for `source`/`system` builds  | -          |
 | `--prebuild [path]`                             | Build into standard `prebuilds/` layout    | -          |
 | `--out <path>`                                  | Copy binary to an exact path (low-level)   | -          |
@@ -467,8 +470,11 @@ These variables can be used for CI/CD or custom build scripts.
 | `LUA_SOURCE_DIR`           | Lua source path (for `source` mode)                     | -          |
 | `LUA_INCLUDE_DIRS`         | Include directories (for `system` mode)                 | -          |
 | `LUA_LIBRARIES`            | Library paths (for `system` mode)                       | -          |
+| `LUA_STATE_DOWNLOAD_DIR`   | Directory to store downloaded Lua sources               | npm cache  |
+| `LUA_STATE_DEBUG`          | Build with debugging enabled                            | `false`    |
 | `LUA_STATE_PREBUILD`       | Build into standard `prebuilds/` layout                 | -          |
 | `LUA_STATE_OUT`            | Copy binary to an exact path (low-level)                | -          |
+| `LUA_STATE_REPOSITORY`     | GitHub repository for prebuilt binaries                 | `quaternion/node-lua-state` |
 
 ## 🔍 Compared to other bindings
 
