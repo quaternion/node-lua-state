@@ -2,16 +2,15 @@
 #include <variant>
 
 #include "lua-state.h"
+#include "napi/lua-state-error.h"
 #include "napi/lua-state.h"
 #include "napi/napi-string-buffer.h"
 #include "runtime/lua-config.h"
 
-#define RETURN_IF_CLOSED(env)                                                                                                                                  \
-  if (runtime_->IsClosed()) [[unlikely]] {                                                                                                                     \
-    auto err = Napi::Error::New(env, "LuaState is closed");                                                                                                    \
-    err.Set("code", "ERR_LUA_STATE_CLOSED");                                                                                                                   \
-    err.ThrowAsJavaScriptException();                                                                                                                          \
-    return env.Undefined();                                                                                                                                    \
+#define RETURN_IF_CLOSED(env)                                                                                                                      \
+  if (runtime_->IsClosed()) [[unlikely]] {                                                                                                         \
+    LuaStateError::New(env, "ERR_LUA_STATE_CLOSED", "LuaState is closed").ThrowAsJavaScriptException();                                            \
+    return env.Undefined();                                                                                                                        \
   }
 
 /**

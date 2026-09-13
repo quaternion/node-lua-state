@@ -1,6 +1,12 @@
 const { beforeEach, describe, it } = require('node:test')
-const { doesNotThrow, throws } = require('node:assert/strict')
-const { LuaState } = require('../js')
+const {
+  doesNotThrow,
+  match,
+  ok,
+  strictEqual,
+  throws,
+} = require('node:assert/strict')
+const { LuaState, LuaStateError } = require('../js')
 
 describe(`${LuaState.name}#${LuaState.prototype.close.name}`, () => {
   let luaState
@@ -24,42 +30,51 @@ describe(`${LuaState.name}#${LuaState.prototype.close.name}`, () => {
     })
 
     describe('on evalFile', () => {
-      it('should throw error', () => {
+      it('should throw LuaStateError', () => {
         throws(
           () => luaState.evalFile(`${__dirname}/fixtures/without-return.lua`),
-          /closed/i,
+          assertClosedStateError,
         )
       })
     })
 
     describe('on eval', () => {
-      it('should throw error', () => {
-        throws(() => luaState.eval(`foo = 1`), /closed/i)
+      it('should throw LuaStateError', () => {
+        throws(() => luaState.eval(`foo = 1`), assertClosedStateError)
       })
     })
 
     describe('on getGlobal', () => {
-      it('should throw error', () => {
-        throws(() => luaState.getGlobal('foo'), /closed/i)
+      it('should throw LuaStateError', () => {
+        throws(() => luaState.getGlobal('foo'), assertClosedStateError)
       })
     })
 
     describe('on getLength', () => {
-      it('should throw error', () => {
-        throws(() => luaState.getLength('foo'), /closed/i)
+      it('should throw LuaStateError', () => {
+        throws(() => luaState.getLength('foo'), assertClosedStateError)
       })
     })
 
     describe('on getVersion', () => {
-      it('should throw error', () => {
-        throws(() => luaState.getVersion(), /closed/i)
+      it('should throw LuaStateError', () => {
+        throws(() => luaState.getVersion(), assertClosedStateError)
       })
     })
 
     describe('on setGlobal', () => {
-      it('should throw error', () => {
-        throws(() => luaState.setGlobal('foo', 'bar'), /closed/i)
+      it('should throw LuaStateError', () => {
+        throws(() => luaState.setGlobal('foo', 'bar'), assertClosedStateError)
       })
     })
   })
 })
+
+function assertClosedStateError(err) {
+  ok(err instanceof LuaStateError, 'is LuaStateError instance')
+  ok(err instanceof Error, 'is Error instance')
+  strictEqual(err.name, 'LuaStateError', 'name')
+  strictEqual(err.code, 'ERR_LUA_STATE_CLOSED', 'code')
+  match(err.message, /closed/i, 'message')
+  return true
+}

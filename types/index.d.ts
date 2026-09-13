@@ -4,6 +4,8 @@ export {
   type LuaLibName,
   type LuaPrimitive,
   LuaState,
+  LuaStateError,
+  type LuaStateErrorCode,
   type LuaStateOptions,
   type LuaTable,
   type LuaValue,

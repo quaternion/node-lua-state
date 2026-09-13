@@ -20,6 +20,7 @@
         "src/core/lua-state-core.cpp",
         "src/napi/init.cpp",
         "src/napi/lua-error.cpp",
+        "src/napi/lua-state-error.cpp",
         "src/napi/lua-state.cpp",
         "src/runtime/lua-js-runtime.cpp"
       ],

@@ -228,6 +228,18 @@ Errors thrown from Lua are represented as `LuaError` instances.
 | `stack`   | `string \| undefined`  | Lua stack traceback (not a JavaScript stack trace)                     |
 | `cause`   | `unknown \| undefined` | Value passed to `error(...)` when it is not a string                   |
 
+### `LuaStateError` Class
+
+Errors thrown by the JavaScript API layer (not from Lua execution) are represented as `LuaStateError` instances. For example, calling a method on a closed `LuaState`.
+
+**Properties**
+
+| Property  | Type                   | Description                                                   |
+| --------- | ---------------------- | ------------------------------------------------------------- |
+| `name`    | `"LuaStateError"`      | Error name                                                    |
+| `message` | `string`               | Error message                                                 |
+| `code`    | `string`               | Machine-readable error code, e.g. `"ERR_LUA_STATE_CLOSED"`    |
+
 ## 🔄 Type Mapping (JS ⇄ Lua) <a id="type-mapping"></a>
 
 When values are passed between JavaScript and Lua, they’re automatically converted according to the tables below. Circular references are preserved during conversion.

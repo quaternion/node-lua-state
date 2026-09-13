@@ -198,6 +198,31 @@ export class LuaError extends Error {
 }
 
 /**
+ * Represents an error thrown by the JavaScript API layer (not from Lua execution).
+ *
+ * Example: calling a method on a closed {@link LuaState}.
+ *
+ * Distinct from {@link LuaError}, which represents errors thrown from Lua.
+ */
+export class LuaStateError extends Error {
+  /** Error name, always `"LuaStateError"`. */
+  name: 'LuaStateError'
+
+  /** Error message. */
+  message: string
+
+  /**
+   * Machine-readable error code.
+   *
+   * - `"ERR_LUA_STATE_CLOSED"` — operation on a closed Lua state.
+   */
+  code: LuaStateErrorCode
+}
+
+/** Possible {@link LuaStateError} codes. */
+export type LuaStateErrorCode = 'ERR_LUA_STATE_CLOSED'
+
+/**
  * Options for creating a {@link LuaState} instance.
  */
 export type LuaStateOptions = Partial<{
