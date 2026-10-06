@@ -87,7 +87,7 @@ jobs:
             shell: bash
             setup: |
               brew install python3
-          - os: windows-2025
+          - os: windows-2022
             shell: bash
             setup: |
               choco install python3 --no-progress
